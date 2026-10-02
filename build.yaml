@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Millisecond precision; sync compares updatedAt to detect edits made mid-push.
+          store_date_time_values_as_text: true
