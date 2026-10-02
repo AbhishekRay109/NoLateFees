@@ -43,6 +43,7 @@ supabase/
   functions/delete-account/
 test/                  41 tests: engine, scheduler, repository, sync, export, widgets
 docs/
+  PHONE_SETUP.md       run it on your Android phone, start to finish
   TESTING.md           how to test, step by step
   RELEASE.md           signing and Play Store release
 ```
