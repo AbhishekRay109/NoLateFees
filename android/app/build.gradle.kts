@@ -1,12 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystoreProperties = java.util.Properties().apply {
-    val f = rootProject.file("key.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
 android {
@@ -37,7 +41,7 @@ android {
     }
 
     signingConfigs {
-        if (!keystoreProperties.isEmpty) {
+        if (!keystoreProperties.isEmpty()) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
@@ -51,7 +55,7 @@ android {
         release {
             // Uses android/key.properties when present (see docs/RELEASE.md),
             // otherwise the debug key so `flutter run --release` still works.
-            signingConfig = if (keystoreProperties.isEmpty) signingConfigs.getByName("debug")
+            signingConfig = if (keystoreProperties.isEmpty()) signingConfigs.getByName("debug")
                             else signingConfigs.getByName("release")
         }
     }
