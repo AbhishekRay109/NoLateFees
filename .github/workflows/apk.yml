@@ -1,10 +1,14 @@
 name: Build APK
-# Builds an installable test APK. Run it from the Actions tab ("Run workflow"),
-# then download "duemate-apk" from the run's Artifacts section.
+# Builds an installable test APK. Run it from the Actions tab ("Run workflow").
+# The APK is attached to a pre-release on the repo's Releases page, so it can be
+# downloaded straight to a phone; it is also kept as the run's "duemate-apk" artifact.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
+
+permissions:
+  contents: write   # to publish the APK as a release download
 
 jobs:
   apk:
@@ -35,3 +39,11 @@ jobs:
         with:
           name: duemate-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Publish APK as a pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: DueMate test build ${{ github.run_number }}
+          prerelease: true
+          files: build/app/outputs/flutter-apk/app-release.apk
+          body: Test build from ${{ github.sha }}. Download app-release.apk on your Android phone and open it to install.
