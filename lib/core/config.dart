@@ -14,6 +14,14 @@ class AppConfig {
   /// → Google → Web SDK configuration). Google Sign-In on Android needs it.
   static const googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
+  /// AdMob banner unit id. Defaults to Google's test banner, which is safe to
+  /// tap; put the real one in env.json before publishing (docs/ADS_SETUP.md).
+  static const admobBannerId =
+      String.fromEnvironment('ADMOB_BANNER_ID', defaultValue: 'ca-app-pub-3940256099942544/9214589741');
+
+  /// Set ADS_ENABLED=false to build without ads.
+  static const adsEnabled = bool.fromEnvironment('ADS_ENABLED', defaultValue: true);
+
   static bool get cloudEnabled =>
       firebaseApiKey.isNotEmpty &&
       firebaseAppId.isNotEmpty &&

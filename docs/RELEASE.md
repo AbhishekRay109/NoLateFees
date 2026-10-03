@@ -18,8 +18,8 @@
    Add this key's SHA-1 and SHA-256 to Firebase (Project settings → Your apps), and also the **App signing key** fingerprints from Play Console → Setup → App signing, or Google and phone sign-in fail in the Play version.
 4. **Play Console** ($25 one-time): create the app, enable **Play App Signing**.
 5. **Privacy policy**: a one-page site (GitHub Pages is free). Say what's stored (reminders, optional attachments, name/email/phone if you sign in), where (on the phone; Google Firebase, Mumbai region, if signed in), and how to delete (Settings → Delete account).
-6. **Data safety form**: name, email address and phone number (account, optional), files (attachments, optional), no data shared with third parties, data encrypted in transit, users can request deletion.
-7. **App content**: no ads (for now), target audience 18+.
+6. **Data safety form**: name, email address and phone number (account, optional), device or other IDs (advertising ID, used by AdMob), files (attachments, optional), no data shared with third parties, data encrypted in transit, users can request deletion.
+7. **App content**: contains ads (one AdMob banner, see [ADS_SETUP.md](ADS_SETUP.md)), target audience 18+.
 
 ## Every release
 

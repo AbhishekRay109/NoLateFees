@@ -20,7 +20,7 @@ cd nolatefees
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze        # expect: No issues found!
-flutter test           # expect: All tests passed! (120 tests)
+flutter test           # expect: All tests passed! (128 tests)
 ```
 
 What they cover:
@@ -36,6 +36,7 @@ What they cover:
 | `test/auth_screens_test.dart` | Google sign-in (success, cancel, error), phone OTP (bad number, wrong code, resend timer, auto-verify), profile screen, Settings account card |
 | `test/firestore_sync_test.dart` | The real Firestore backend against an in-memory Firestore: per-user folders, delete wins, incremental pulls, two phones syncing end to end |
 | `test/ui_helpers_test.dart` | Countdown ring, category colours, themes, labels, money formatting, leap-day and month-end renewals |
+| `test/ads_test.dart` | The banner appears only on Home and All Items, above the navigation, never on forms, sign-in, Calendar or Settings, and takes no space until loaded |
 | `test/migration_test.dart` | Upgrading a version-1 database keeps data and adds the profile fields |
 
 Run one file: `flutter test test/sync_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
@@ -84,6 +85,12 @@ Tick each one. Anything that fails, note the step and what you saw.
 - [ ] The countdown moved by a year, and **Renewal history** shows "old date → new date" with the amount.
 - [ ] Renew a monthly item due on 31 Jan: the next date is 28 Feb (29 in a leap year).
 - [ ] A "Doesn't repeat" item asks you to pick the new date.
+
+**Ads**
+
+- [ ] Home and All Items show a slim "Test Ad" banner just above the bottom bar; the Add Reminder button sits above it.
+- [ ] Calendar, Settings, Add/Edit Reminder and the welcome screens have no ad. No pop-up ad ever appears.
+- [ ] Airplane mode, then reopen the app: the banner strip disappears completely (no empty gap).
 
 **Everything else**
 

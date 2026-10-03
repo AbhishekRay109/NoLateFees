@@ -37,6 +37,7 @@ jobs:
           python3 -c "import json; d=json.load(open('env.json')); print('Cloud config keys:', sorted(d) or 'none (offline build)')"
       - name: Build release APK
         run: |
+          export ADMOB_APP_ID=$(python3 -c "import json; print(json.load(open('env.json')).get('ADMOB_APP_ID', ''))")
           flutter build apk --release --dart-define-from-file=env.json
           cp build/app/outputs/flutter-apk/app-release.apk NoLateFees.apk
       - name: Show signing fingerprints (add these to Firebase)
