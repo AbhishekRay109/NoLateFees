@@ -20,7 +20,7 @@ cd nolatefees
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze        # expect: No issues found!
-flutter test           # expect: All tests passed! (128 tests)
+flutter test           # expect: All tests passed!
 ```
 
 What they cover:
@@ -38,8 +38,11 @@ What they cover:
 | `test/ui_helpers_test.dart` | Countdown ring, category colours, themes, labels, money formatting, leap-day and month-end renewals |
 | `test/ads_test.dart` | The banner appears only on Home and All Items, above the navigation, never on forms, sign-in, Calendar or Settings, and takes no space until loaded |
 | `test/migration_test.dart` | Upgrading a version-1 database keeps data and adds the profile fields |
+| `test/production_release_gate_test.dart` | Release-critical journeys: edits replace obsolete alerts, deletion cancels alerts, renewal history and relationships survive backup/restore, and sync carries renewal then deletion across devices |
 
-Run one file: `flutter test test/sync_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
+Run the production release regression gates: `flutter test test/production_release_gate_test.dart`. Run one file: `flutter test test/sync_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
+
+The production release regression tests run as part of `flutter test` on every release. They complement, but do not replace, the physical-device and Play Console steps in [PRODUCTION_QA_CHECKLIST.md](PRODUCTION_QA_CHECKLIST.md).
 
 ---
 
