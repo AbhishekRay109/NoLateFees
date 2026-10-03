@@ -2,6 +2,8 @@
 
 Use this checklist for **each release candidate**, not just during development. A release is ready only when every applicable release-gate case below passes on the exact build intended for Play. A skipped, blocked, or unverified case is not a pass.
 
+Many cases are also covered by automated tests; [QA_AUTOMATION.md](QA_AUTOMATION.md) shows which ones, and which still need a phone or the Play Console.
+
 ## Release record
 
 Complete this before testing. Use a fresh copy of this record for each candidate.
