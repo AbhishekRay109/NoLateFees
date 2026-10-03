@@ -66,7 +66,10 @@ Cloud copies of attached PDFs and photos need Firebase Storage, which requires t
 
 If you want it: **Build → Storage** → **Get started** → same location → then the **Rules** tab → paste [`firebase/storage.rules`](../firebase/storage.rules) → **Publish**. Copy the bucket name shown at the top (like `nolatefees-xxxx.firebasestorage.app`).
 
-## 7. Give the values to GitHub
+## 7. Give the values to the build
+
+Easiest: put them in `app_config.json` at the repo root (or send them to Claude in the project thread and it will commit the file). These values are not passwords: they ship inside every APK anyway, and the security rules are what protect the data. GitHub may still flag the API key as a "secret"; that alert can be closed as "used in tests / false positive". If you'd rather keep them out of the repo, use the GitHub secret below instead (it overrides the file).
+
 
 Open the `google-services.json` you downloaded (any text editor) and find these values:
 
