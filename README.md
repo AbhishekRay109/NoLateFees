@@ -65,7 +65,7 @@ flutter run            # offline mode, no account needed
 With sign-in and cloud sync (after [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)):
 
 ```bash
-cp env.example.json env.json      # fill in your Firebase values
+cp app_config.json env.json       # the project's Firebase + AdMob ids (or fill in env.example.json)
 flutter run --dart-define-from-file=env.json
 ```
 
