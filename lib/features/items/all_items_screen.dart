@@ -110,15 +110,27 @@ class _AllItemsScreenState extends ConsumerState<AllItemsScreen> {
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: SearchBar(
+          // A plain TextField rather than SearchBar: SearchBar's tap area has
+          // no label for TalkBack.
+          child: TextField(
+            key: const Key('searchField'),
             controller: _search,
-            hintText: 'Search name, provider, policy no.',
-            leading: const Icon(Icons.search),
             onChanged: (_) => setState(() {}),
-            trailing: [
-              if (_search.text.isNotEmpty)
-                IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(_search.clear)),
-            ],
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search name, provider, policy no.',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(_search.clear)),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
+            ),
           ),
         ),
         SizedBox(

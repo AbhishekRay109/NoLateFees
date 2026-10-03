@@ -38,6 +38,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           focusedDay: _focused,
           startingDayOfWeek: StartingDayOfWeek.monday,
           availableCalendarFormats: const {CalendarFormat.month: 'Month'},
+          // Labels so TalkBack reads the month arrows.
+          headerStyle: const HeaderStyle(
+            leftChevronIcon: Icon(Icons.chevron_left, semanticLabel: 'Previous month'),
+            rightChevronIcon: Icon(Icons.chevron_right, semanticLabel: 'Next month'),
+          ),
           selectedDayPredicate: (d) => isSameDay(d, _selected),
           eventLoader: (d) => byDay[dateOnly(d)] ?? const [],
           onDaySelected: (selected, focused) => setState(() {

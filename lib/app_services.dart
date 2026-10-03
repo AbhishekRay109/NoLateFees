@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show BooleanExpressionOperators, Value;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -188,12 +188,31 @@ class AppServices {
     if (auth != null && signedIn) {
       final r = remote;
       if (r is FirestoreRemoteStore) await r.deleteAllUserData();
-      await auth!.deleteAccount();
+      try {
+        await auth!.deleteAccount();
+      } on AuthFailure {
+        // The account stays (e.g. Google wants a fresh sign-in), but its cloud
+        // copy is already gone: queue everything on this phone for upload.
+        await _markAllForUpload();
+        sync?.schedule(delay: Duration.zero);
+        rethrow;
+      }
       await auth!.signOut();
     }
     await scheduler.clear();
     await db.wipe();
   }
+
+  Future<void> _markAllForUpload() => db.transaction(() async {
+        await db.update(db.profiles).write(const ProfilesCompanion(dirty: Value(true)));
+        await db.update(db.familyMembers).write(const FamilyMembersCompanion(dirty: Value(true)));
+        await db.update(db.customCategories).write(const CustomCategoriesCompanion(dirty: Value(true)));
+        await db.update(db.items).write(const ItemsCompanion(dirty: Value(true)));
+        await db.update(db.renewals).write(const RenewalsCompanion(dirty: Value(true)));
+        await db.update(db.attachments).write(const AttachmentsCompanion(dirty: Value(true)));
+        await (db.update(db.attachments)..where((a) => a.localPath.isNotNull() & a.deletedAt.isNull()))
+            .write(const AttachmentsCompanion(uploadPending: Value(true)));
+      });
 
   void dispose() {
     _connectivity?.cancel();

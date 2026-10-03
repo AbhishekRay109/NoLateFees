@@ -13,6 +13,13 @@ if (keystorePropertiesFile.exists()) {
     FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
+// A Play Store bundle must never be signed with the public test key: the
+// first upload would make it the app's upload key.
+if (keystoreProperties.isEmpty() &&
+    gradle.startParameter.taskNames.any { it.contains("bundleRelease", ignoreCase = true) }) {
+    throw GradleException("Release bundles need android/key.properties with your upload key (see docs/RELEASE.md).")
+}
+
 android {
     namespace = "com.nolatefees.app"
     compileSdk = flutter.compileSdkVersion
