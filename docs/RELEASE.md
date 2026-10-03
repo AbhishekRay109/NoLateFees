@@ -1,23 +1,24 @@
-# Releasing DueMate on Google Play
+# Releasing NoLateFees on Google Play
 
 ## Once
 
-1. **Pick the final application id.** It is `app.duemate.duemate` in `android/app/build.gradle.kts` (`applicationId`) and can never change after the first upload. Use a domain you control, reversed (e.g. `in.yourname.duemate`).
+1. **Pick the final application id.** It is `com.nolatefees.app` in `android/app/build.gradle.kts` (`applicationId`) and can never change after the first upload. Change it now if you'd rather use a domain you own, reversed (e.g. `in.yourname.nolatefees`), and register the new id in Firebase too.
 2. **Create an upload key** and keep it backed up somewhere safe (losing it means asking Google to reset it):
    ```bash
-   keytool -genkey -v -keystore ~/duemate-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   keytool -genkey -v -keystore ~/nolatefees-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
    ```
 3. Create `android/key.properties` (git-ignored):
    ```properties
    storePassword=...
    keyPassword=...
    keyAlias=upload
-   storeFile=/absolute/path/to/duemate-upload.jks
+   storeFile=/absolute/path/to/nolatefees-upload.jks
    ```
-   The release build picks it up automatically.
+   The release build picks it up automatically instead of the test key `android/app/ci-test.jks`.
+   Add this key's SHA-1 and SHA-256 to Firebase (Project settings → Your apps), and also the **App signing key** fingerprints from Play Console → Setup → App signing, or Google and phone sign-in fail in the Play version.
 4. **Play Console** ($25 one-time): create the app, enable **Play App Signing**.
-5. **Privacy policy**: a one-page site (GitHub Pages is free). Say what's stored (reminders, optional attachments, email if you sign in), where (on the phone; Supabase Mumbai if signed in), and how to delete (Settings → Delete account).
-6. **Data safety form**: email address (account, optional), files (attachments, optional), no data shared with third parties, data encrypted in transit, users can request deletion.
+5. **Privacy policy**: a one-page site (GitHub Pages is free). Say what's stored (reminders, optional attachments, name/email/phone if you sign in), where (on the phone; Google Firebase, Mumbai region, if signed in), and how to delete (Settings → Delete account).
+6. **Data safety form**: name, email address and phone number (account, optional), files (attachments, optional), no data shared with third parties, data encrypted in transit, users can request deletion.
 7. **App content**: no ads (for now), target audience 18+.
 
 ## Every release
@@ -44,5 +45,5 @@ Organization accounts (need a D-U-N-S number) are exempt.
 
 ## Before the public launch
 
-- Supabase: upgrade to **Pro** for daily backups and no pausing; add custom SMTP for login emails.
-- Change the launcher icon (`flutter_launcher_icons` package) and the app name if needed (`android:label` in `AndroidManifest.xml`).
+- Firebase: turn on Firestore backups (point-in-time recovery or scheduled backups), set a budget alert if on Blaze, and enable App Check.
+- The launcher icon comes from `assets/logo/logo.png` via `dart run flutter_launcher_icons`.

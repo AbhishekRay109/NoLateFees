@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_services.dart';
+import 'core/theme.dart';
+import 'data/local/database.dart';
 import 'data/notifications/local_notifications.dart';
+import 'features/auth/welcome_screen.dart';
 import 'features/items/item_detail_screen.dart';
 import 'features/shell/home_shell.dart';
 
@@ -17,14 +20,14 @@ void openFromNotification(String itemId, String action) {
   ));
 }
 
-class DueMateApp extends ConsumerStatefulWidget {
-  const DueMateApp({super.key});
+class NoLateFeesApp extends ConsumerStatefulWidget {
+  const NoLateFeesApp({super.key});
 
   @override
-  ConsumerState<DueMateApp> createState() => _DueMateAppState();
+  ConsumerState<NoLateFeesApp> createState() => _NoLateFeesAppState();
 }
 
-class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObserver {
+class _NoLateFeesAppState extends ConsumerState<NoLateFeesApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -44,26 +47,24 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = switch (ref.watch(profileProvider).value?.themeMode) {
+    final profile = ref.watch(profileProvider).value;
+    final themeMode = switch (profile?.themeMode) {
       'light' => ThemeMode.light,
       'dark' => ThemeMode.dark,
       _ => ThemeMode.system,
     };
     return MaterialApp(
-      title: 'DueMate',
+      title: 'NoLateFees',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
-      home: const HomeShell(),
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      home: switch (profile) {
+        null => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        Profile(onboarded: false) => const WelcomeScreen(),
+        _ => const HomeShell(),
+      },
     );
   }
-
-  ThemeData _theme(Brightness b) => ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2E6FDB),
-        brightness: b,
-        inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
-      );
 }

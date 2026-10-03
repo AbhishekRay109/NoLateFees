@@ -1,0 +1,17 @@
+rules_version = '2';
+// Each person can only read and write their own tree: users/{uid}/...
+// A deleted row (deleted_at set) can't be brought back by a stale phone.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{table}/{id} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && table in ['profiles', 'family_members', 'categories', 'items', 'renewals', 'attachments']
+                    && request.resource.data.server_updated_at == request.time;
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.server_updated_at == request.time
+                    && (resource.data.get('deleted_at', null) == null
+                        || request.resource.data.get('deleted_at', null) != null);
+    }
+  }
+}

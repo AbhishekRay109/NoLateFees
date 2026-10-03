@@ -1,48 +1,64 @@
-import 'package:duemate/app.dart';
-import 'package:duemate/app_services.dart';
-import 'package:duemate/data/attachment_service.dart';
-import 'package:duemate/data/backup/export_service.dart';
-import 'package:duemate/data/item_repository.dart';
-import 'package:duemate/data/local/database.dart';
-import 'package:duemate/data/notifications/notification_scheduler.dart';
-import 'package:duemate/domain/reminder_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nolatefees/app.dart';
+import 'package:nolatefees/app_services.dart';
+import 'package:nolatefees/domain/reminder_engine.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
-import 'package:timezone/timezone.dart' as tz;
 
 import 'helpers.dart';
 
 void main() {
   setUpAll(tzdata.initializeTimeZones);
 
-  late AppDatabase db;
   late AppServices services;
   late FakeGateway gateway;
 
   setUp(() {
-    db = memoryDb();
     gateway = FakeGateway();
-    final repo = ItemRepository(db);
-    services = AppServices(
-      db: db,
-      repo: repo,
-      scheduler: NotificationScheduler(db, gateway, location: tz.getLocation('Asia/Kolkata'), limit: 60),
-      export: ExportService(db),
-      attachments: AttachmentService(repo),
-    );
+    services = buildServices(gateway: gateway);
   });
 
-  tearDown(() => db.close());
+  tearDown(() => services.db.close());
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  Future<void> pumpApp(WidgetTester tester, {bool onboarded = true}) async {
+    usePhoneScreen(tester);
+    if (onboarded) await tester.runAsync(() => markOnboarded(services));
     await tester.pumpWidget(ProviderScope(
       overrides: [servicesProvider.overrideWithValue(services)],
-      child: const DueMateApp(),
+      child: const NoLateFeesApp(),
     ));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('a fresh install opens on the welcome screen', (tester) async {
+    await pumpApp(tester, onboarded: false);
+    expect(find.text('Never pay a late fee again.'), findsOneWidget);
+    // No Firebase in this build: offline note and a plain "Get started".
+    expect(find.textContaining('Firebase is connected'), findsOneWidget);
+    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsNothing);
+  });
+
+  testWidgets('offline onboarding: name, then home screen with a greeting', (tester) async {
+    await pumpApp(tester, onboarded: false);
+    await tester.tap(find.text('Get started'));
+    await tester.pumpAndSettle();
+
+    // Name is required.
+    await tester.tap(find.text('Let\'s go'));
+    await tester.pumpAndSettle();
+    expect(find.text('Please enter your name'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('nameField')), 'Sumaiya Mansoor');
+    await tester.tap(find.text('Let\'s go'));
+    await settleDb(tester);
+
+    expect(find.textContaining(', Sumaiya 👋'), findsOneWidget);
+    expect(find.text('Add Reminder'), findsOneWidget);
+    final p = await tester.runAsync(() => services.repo.profile());
+    expect(p!.onboarded, isTrue);
+  });
 
   testWidgets('empty dashboard invites the first reminder', (tester) async {
     await pumpApp(tester);
@@ -68,7 +84,10 @@ void main() {
     expect(find.text('Expired 2 days ago'), findsOneWidget);
     expect(find.text('5 days left'), findsOneWidget);
     expect(find.text('183 days left'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget); // things to renew in the next 30 days
+    expect(find.byKey(const Key('statOverdue')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('statRenew')), matching: find.text('2')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('statOverdue')), matching: find.text('1')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('statTotal')), matching: find.text('3')), findsOneWidget);
   });
 
   testWidgets('add reminder flow saves an item and books notifications', (tester) async {
@@ -93,5 +112,29 @@ void main() {
     expect(items.single.recurrenceUnit, RecurrenceUnit.year);
     expect(gateway.booked, isNotEmpty);
     expect(find.text('My Car Insurance'), findsOneWidget);
+  });
+
+  testWidgets('add reminder needs a name', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Add Reminder'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SAVE'));
+    await tester.pumpAndSettle();
+    final items = await tester.runAsync(() => services.repo.activeItems());
+    expect(items, isEmpty);
+    expect(find.text('SAVE'), findsOneWidget); // still on the form
+  });
+
+  testWidgets('bottom navigation reaches every tab', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byIcon(Icons.list_alt_outlined));
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Offline mode'), findsOneWidget);
+    expect(find.text('Asha'), findsOneWidget); // profile card
+    expect(find.text('On this phone only'), findsOneWidget);
+    expect(find.text('Add Reminder'), findsNothing); // no FAB on Settings
   });
 }

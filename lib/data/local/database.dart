@@ -1,6 +1,6 @@
-// The phone's database. It is the source of truth for every screen; Supabase
-// only holds a backup copy (see data/sync). Synced tables mirror
-// supabase/migrations and add `dirty` (changed here, not pushed yet).
+// The phone's database. It is the source of truth for every screen; Firestore
+// only holds a backup copy (see data/sync). Synced tables mirror the
+// documents under users/{uid}/ and add `dirty` (changed here, not pushed yet).
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -41,6 +41,9 @@ mixin SyncColumns on Table {
 class Profiles extends Table {
   TextColumn get id => text().withDefault(const Constant('me'))();
   TextColumn get displayName => text().nullable()();
+  TextColumn get email => text().nullable()(); // v2
+  TextColumn get phone => text().nullable()(); // v2, E.164 e.g. +919876543210
+  TextColumn get photoUrl => text().nullable()(); // v2
   TextColumn get timezone => text().withDefault(const Constant('Asia/Kolkata'))();
   IntColumn get defaultNotifyMinutes =>
       integer().withDefault(const Constant(9 * 60))(); // 09:00
@@ -51,6 +54,7 @@ class Profiles extends Table {
   TextColumn get themeMode => text().withDefault(const Constant('system'))(); // local only
   BoolColumn get exactAlarms => boolean().withDefault(const Constant(false))(); // local only
   BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))(); // local only
+  BoolColumn get onboarded => boolean().withDefault(const Constant(false))(); // v2, local only
   IntColumn get rev => integer().withDefault(const Constant(0))();
   BoolColumn get dirty => boolean().withDefault(const Constant(false))();
 
@@ -165,13 +169,14 @@ class SyncState extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  /// The on-device database file "duemate.sqlite". Shared across isolates so
+  /// The on-device database file "duemate.sqlite" (name kept so existing
+  /// installs keep their data after the NoLateFees rename). Shared across isolates so
   /// a Snooze pressed in the background shows up on screen straight away.
   factory AppDatabase.open() => AppDatabase(driftDatabase(
       name: 'duemate', native: const DriftNativeOptions(shareAcrossIsolates: true)));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -183,6 +188,15 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('CREATE INDEX renewals_item ON renewals (item_id)');
           await customStatement('CREATE INDEX attachments_item ON attachments (item_id)');
           await into(profiles).insert(const ProfilesCompanion());
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v2: user info from the login/profile screens.
+            await m.addColumn(profiles, profiles.email);
+            await m.addColumn(profiles, profiles.phone);
+            await m.addColumn(profiles, profiles.photoUrl);
+            await m.addColumn(profiles, profiles.onboarded);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');

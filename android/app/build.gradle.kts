@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "app.duemate.duemate"
+    namespace = "com.nolatefees.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         // Change before the first Play Store upload; it can never change afterwards.
-        applicationId = "app.duemate.duemate"
+        applicationId = "com.nolatefees.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -41,6 +41,15 @@ android {
     }
 
     signingConfigs {
+        // Test-only key committed to the repo (password is public) so every
+        // build has the same SHA-1/SHA-256, which Firebase needs for Google and
+        // phone sign-in. Real Play Store releases use android/key.properties.
+        create("ciTest") {
+            storeFile = file("ci-test.jks")
+            storePassword = "nolatefees-test"
+            keyAlias = "nolatefees-test"
+            keyPassword = "nolatefees-test"
+        }
         if (!keystoreProperties.isEmpty()) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
@@ -52,10 +61,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("ciTest")
+        }
         release {
             // Uses android/key.properties when present (see docs/RELEASE.md),
-            // otherwise the debug key so `flutter run --release` still works.
-            signingConfig = if (keystoreProperties.isEmpty()) signingConfigs.getByName("debug")
+            // otherwise the shared test key.
+            signingConfig = if (keystoreProperties.isEmpty()) signingConfigs.getByName("ciTest")
                             else signingConfigs.getByName("release")
         }
     }

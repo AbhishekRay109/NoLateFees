@@ -13,7 +13,11 @@ import '../../core/format.dart';
 import '../../data/local/database.dart';
 import '../../data/sync/sync_service.dart';
 import '../../widgets/offsets_picker.dart';
-import '../auth/sign_in_screen.dart';
+import '../../core/theme.dart';
+import '../../data/auth/auth_service.dart';
+import '../../widgets/brand.dart';
+import '../auth/profile_setup_screen.dart';
+import '../auth/welcome_screen.dart';
 import 'family_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -24,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider);
     final repo = services.repo;
     final profile = ref.watch(profileProvider).value;
-    final email = ref.watch(userEmailProvider).value;
+    final user = ref.watch(authUserProvider).value;
     final sync = ref.watch(syncStatusProvider).value;
     if (profile == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
@@ -35,24 +39,26 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
+          _ProfileCard(profile: profile, user: user),
           _header(context, 'Account & backup'),
-          if (services.supabase == null)
+          if (!services.cloudAvailable)
             const ListTile(
               leading: Icon(Icons.cloud_off_outlined),
               title: Text('Offline mode'),
               subtitle: Text('Cloud backup is not set up in this build. Use Export to keep a backup.'),
             )
-          else if (email == null)
+          else if (user == null)
             ListTile(
               leading: const Icon(Icons.login),
               title: const Text('Sign in to back up and sync'),
-              subtitle: const Text('Your reminders stay on this phone until you sign in.'),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen())),
+              subtitle: const Text('Google or phone number. Your reminders stay on this phone until you sign in.'),
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const WelcomeScreen(signInOnly: true))),
             )
           else ...[
             ListTile(
-              leading: const Icon(Icons.account_circle_outlined),
-              title: Text(email),
+              leading: const Icon(Icons.cloud_done_outlined),
+              title: const Text('Cloud sync'),
               subtitle: Text(_syncText(sync)),
               trailing: IconButton(
                 tooltip: 'Sync now',
@@ -76,13 +82,13 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.table_view_outlined),
             title: const Text('Export to CSV'),
             subtitle: const Text('Open in Excel or Google Sheets'),
-            onTap: () async => _share(await services.export.toCsv(), 'duemate.csv', 'text/csv'),
+            onTap: () async => _share(await services.export.toCsv(), 'nolatefees.csv', 'text/csv'),
           ),
           ListTile(
             leading: const Icon(Icons.save_alt),
             title: const Text('Export backup (JSON)'),
             subtitle: const Text('Save to Google Drive or send to yourself'),
-            onTap: () async => _share(await services.export.toJson(), 'duemate-backup.json', 'application/json'),
+            onTap: () async => _share(await services.export.toJson(), 'nolatefees-backup.json', 'application/json'),
           ),
           ListTile(
             leading: const Icon(Icons.restore),
@@ -96,7 +102,7 @@ class SettingsScreen extends ConsumerWidget {
                 services.sync?.schedule();
                 snack('Imported $n items.');
               } catch (_) {
-                snack('That file is not a DueMate backup.');
+                snack('That file is not a NoLateFees backup.');
               }
             },
           ),
@@ -140,7 +146,7 @@ class SettingsScreen extends ConsumerWidget {
               value: profile.exactAlarms,
               onChanged: (v) async {
                 if (v && !(await services.notifications?.requestExactAlarms() ?? false)) {
-                  snack('Allow "Alarms & reminders" for DueMate in system settings, then try again.');
+                  snack('Allow "Alarms & reminders" for NoLateFees in system settings, then try again.');
                   return;
                 }
                 await repo.updateProfile(ProfilesCompanion(exactAlarms: Value(v)), synced: false);
@@ -151,7 +157,7 @@ class SettingsScreen extends ConsumerWidget {
               leading: Icon(Icons.battery_alert_outlined),
               title: Text('Not getting reminders?'),
               subtitle: Text('Some phones (Xiaomi, Oppo, Vivo, Realme, OnePlus) stop apps in the background. '
-                  'In system settings, set DueMate\'s battery usage to "No restrictions".'),
+                  'In system settings, set NoLateFees\'s battery usage to "No restrictions".'),
             ),
           _header(context, 'Family'),
           ListTile(
@@ -161,17 +167,6 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FamilyScreen())),
           ),
           _header(context, 'Appearance'),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Your name'),
-            subtitle: Text(profile.displayName ?? 'Not set'),
-            onTap: () async {
-              final name = await _askText(context, 'Your name', profile.displayName ?? '');
-              if (name != null) {
-                await repo.updateProfile(ProfilesCompanion(displayName: Value(name.isEmpty ? null : name)));
-              }
-            },
-          ),
           ListTile(
             leading: const Icon(Icons.dark_mode_outlined),
             title: const Text('Theme'),
@@ -204,7 +199,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Time zone'),
             subtitle: Text(profile.timezone),
           ),
-          if (email != null) ...[
+          if (user != null) ...[
             _header(context, 'Danger zone'),
             ListTile(
               leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
@@ -215,6 +210,10 @@ class SettingsScreen extends ConsumerWidget {
                   try {
                     await services.deleteAccount();
                     snack('Your account was deleted.');
+                  } on AuthFailure catch (e) {
+                    snack(e.code == 'requires-recent-login'
+                        ? 'For safety, sign out, sign in again, then delete the account.'
+                        : e.message);
                   } catch (_) {
                     snack('Could not delete the account. Check your connection and try again.');
                   }
@@ -240,7 +239,7 @@ class SettingsScreen extends ConsumerWidget {
     final dir = await getTemporaryDirectory();
     final file = File(p.join(dir.path, fileName));
     await file.writeAsString(content);
-    await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: mime)], subject: 'DueMate export'));
+    await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: mime)], subject: 'NoLateFees export'));
   }
 
   static Widget _header(BuildContext context, String title) => Padding(
@@ -259,18 +258,63 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       );
+}
 
-  static Future<String?> _askText(BuildContext context, String title, String initial) {
-    final c = TextEditingController(text: initial);
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(controller: c, autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, c.text.trim()), child: const Text('Save')),
-        ],
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.profile, required this.user});
+  final Profile profile;
+  final AppUser? user;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = profile.displayName ?? user?.name;
+    final details = [
+      if ((profile.email ?? user?.email) != null) profile.email ?? user!.email!,
+      if ((profile.phone ?? user?.phone) != null) formatPhone(profile.phone ?? user!.phone!),
+    ];
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      decoration: BoxDecoration(
+        gradient: Brand.gradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Brand.violet.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 8))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ProfileSetupScreen(editing: true))),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: UserAvatar(initials: initialsOf(name), photoUrl: profile.photoUrl ?? user?.photoUrl, radius: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name ?? 'Add your name',
+                      style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(details.isEmpty ? 'Tap to edit your profile' : details.join('\n'),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(8)),
+                    child: Text(user == null ? 'On this phone only' : 'Synced to your account',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ),
+              const Icon(Icons.edit_outlined, color: Colors.white),
+            ]),
+          ),
+        ),
       ),
     );
   }

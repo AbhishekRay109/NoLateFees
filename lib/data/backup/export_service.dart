@@ -47,7 +47,7 @@ class ExportService {
     final family = await (db.select(db.familyMembers)..where((f) => f.deletedAt.isNull())).get();
     final cats = await (db.select(db.customCategories)..where((c) => c.deletedAt.isNull())).get();
     return const JsonEncoder.withIndent('  ').convert({
-      'app': 'DueMate',
+      'app': 'NoLateFees',
       'format': backupFormatVersion,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'profile': profileToJson(profile, uid)..remove('id'),
@@ -62,8 +62,9 @@ class ExportService {
   /// replaced; nothing is deleted. Returns the number of items imported.
   Future<int> importJson(String source) async {
     final data = jsonDecode(source) as Map<String, dynamic>;
-    if (data['app'] != 'DueMate' || data['format'] != backupFormatVersion) {
-      throw const FormatException('This file is not a DueMate backup.');
+    // Backups made before the rename say 'DueMate'; both are accepted.
+    if (!const ['NoLateFees', 'DueMate'].contains(data['app']) || data['format'] != backupFormatVersion) {
+      throw const FormatException('This file is not a NoLateFees backup.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
     Map<String, dynamic> prep(Object? row) =>

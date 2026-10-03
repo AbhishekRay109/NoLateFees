@@ -1,11 +1,12 @@
-// Two-way sync between the phone (Drift) and Supabase.
+// Two-way sync between the phone (Drift) and the cloud (Cloud Firestore, see
+// firestore_remote_store.dart; any RemoteStore works).
 //
-//   push: upsert every dirty row, oldest tables first so foreign keys exist
+//   push: upsert every dirty row, parents first (family before items...)
 //   pull: fetch rows where rev > last pulled rev, apply them unless the local
 //         copy is still dirty (a local edit wins until it has been pushed)
 //
-// Conflicts: last push wins per row; deletes win over edits (the server
-// trigger refuses to clear deleted_at). Renewals are append-only.
+// Conflicts: last push wins per row; deletes win over edits (the store keeps
+// deleted_at once set). Renewals are append-only.
 import 'dart:async';
 import 'dart:convert';
 
@@ -146,7 +147,13 @@ class SyncService {
           ..where((a) => a.uploadPending.equals(true) & a.deletedAt.isNull() & a.localPath.isNotNull()))
         .get();
     for (final a in pending) {
-      await remote.uploadFile('$uid/${a.storagePath}', a.localPath!, a.mimeType);
+      try {
+        await remote.uploadFile('$uid/${a.storagePath}', a.localPath!, a.mimeType);
+      } catch (_) {
+        // File storage unavailable (offline, or not enabled): keep the file on
+        // the phone and retry next sync. Never block the rest of the sync.
+        continue;
+      }
       await (db.update(db.attachments)..where((t) => t.id.equals(a.id)))
           .write(const AttachmentsCompanion(uploadPending: Value(false)));
     }
@@ -216,6 +223,7 @@ class SyncService {
     final state = await (db.select(db.syncState)..where((s) => s.tableNameKey.equals(table)))
         .getSingleOrNull();
     var since = state?.lastRev ?? 0;
+    var advanced = true;
     while (true) {
       final rows = await remote.fetchSince(table, since, pageSize);
       if (rows.isEmpty) break;
@@ -223,11 +231,15 @@ class SyncService {
         for (final row in rows) {
           await apply(row);
         }
-        since = rows.map(_rev).reduce((a, b) => a > b ? a : b);
+        final maxRev = rows.map(_rev).reduce((a, b) => a > b ? a : b);
+        advanced = maxRev > since;
+        if (advanced) since = maxRev;
         await db.into(db.syncState).insertOnConflictUpdate(
             SyncStateCompanion(tableNameKey: Value(table), lastRev: Value(since)));
       });
-      if (rows.length < pageSize) break;
+      // A store may re-send rows near the cursor (Firestore overlaps by a
+      // minute to cover clock skew); stop if the cursor didn't move.
+      if (rows.length < pageSize || !advanced) break;
     }
   }
 
@@ -244,7 +256,7 @@ class SyncService {
 }
 
 // ==================================================================== mapping
-// Local rows <-> Supabase JSON. Server column names are snake_case; dates are
+// Local rows <-> Firestore documents. Server column names are snake_case; dates are
 // 'yyyy-mm-dd'; times are 'HH:MM:SS'; enums are their names.
 
 String? _date(DateTime? d) => d == null ? null : formatDate(d);
@@ -266,6 +278,9 @@ List<int>? _intList(Object? v) => v == null ? null : (v as List).map((e) => (e a
 Map<String, dynamic> profileToJson(Profile p, String uid) => {
       'id': uid,
       'display_name': p.displayName,
+      'email': p.email,
+      'phone': p.phone,
+      'photo_url': p.photoUrl,
       'timezone': p.timezone,
       'default_notify_at': minutesToTime(p.defaultNotifyMinutes),
       'default_offsets': p.defaultOffsets,
@@ -274,6 +289,9 @@ Map<String, dynamic> profileToJson(Profile p, String uid) => {
 
 ProfilesCompanion profileFromJson(Map<String, dynamic> j) => ProfilesCompanion(
       displayName: Value(j['display_name'] as String?),
+      email: Value(j['email'] as String?),
+      phone: Value(j['phone'] as String?),
+      photoUrl: Value(j['photo_url'] as String?),
       timezone: Value(j['timezone'] as String),
       defaultNotifyMinutes: Value(timeToMinutes(j['default_notify_at'])!),
       defaultOffsets: Value(_intList(j['default_offsets'])!),

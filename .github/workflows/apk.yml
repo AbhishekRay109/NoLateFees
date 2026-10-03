@@ -1,7 +1,7 @@
 name: Build APK
 # Builds an installable test APK. Run it from the Actions tab ("Run workflow").
 # The APK is attached to a pre-release on the repo's Releases page, so it can be
-# downloaded straight to a phone; it is also kept as the run's "duemate-apk" artifact.
+# downloaded straight to a phone; it is also kept as the run's "nolatefees-apk" artifact.
 on:
   workflow_dispatch:
   push:
@@ -26,24 +26,31 @@ jobs:
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter test
-      # Optional cloud sync: add repository secrets SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.
-      - name: Build release APK
+      # Sign-in and cloud sync are optional. Add a repository secret named
+      # APP_ENV_JSON holding the Firebase values (see docs/FIREBASE_SETUP.md).
+      # Without it the APK runs fully offline.
+      - name: Write env.json
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          APP_ENV_JSON: ${{ secrets.APP_ENV_JSON }}
         run: |
-          flutter build apk --release \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+          if [ -n "$APP_ENV_JSON" ]; then printf '%s' "$APP_ENV_JSON" > env.json; else echo '{}' > env.json; fi
+          python3 -c "import json; d=json.load(open('env.json')); print('Cloud config keys:', sorted(d) or 'none (offline build)')"
+      - name: Build release APK
+        run: |
+          flutter build apk --release --dart-define-from-file=env.json
+          cp build/app/outputs/flutter-apk/app-release.apk NoLateFees.apk
+      - name: Show signing fingerprints (add these to Firebase)
+        run: keytool -list -v -keystore android/app/ci-test.jks -storepass nolatefees-test | grep -E 'SHA1|SHA256'
       - uses: actions/upload-artifact@v4
         with:
-          name: duemate-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: nolatefees-apk
+          path: NoLateFees.apk
       - name: Publish APK as a pre-release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: DueMate test build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: NoLateFees test build ${{ github.run_number }}
           prerelease: true
-          files: build/app/outputs/flutter-apk/app-release.apk
-          body: Test build from ${{ github.sha }}. Download app-release.apk on your Android phone and open it to install.
+          files: NoLateFees.apk
+          body: Test build from ${{ github.ref_name }} (${{ github.sha }}). Download NoLateFees.apk on your Android phone and open it to install.
