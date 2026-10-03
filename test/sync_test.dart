@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:duemate/data/item_repository.dart';
-import 'package:duemate/data/local/database.dart';
-import 'package:duemate/data/sync/sync_service.dart';
-import 'package:duemate/domain/reminder_engine.dart';
+import 'package:nolatefees/data/item_repository.dart';
+import 'package:nolatefees/data/local/database.dart';
+import 'package:nolatefees/data/sync/sync_service.dart';
+import 'package:nolatefees/domain/reminder_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';

@@ -29,6 +29,35 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _photoUrlMeta = const VerificationMeta(
+    'photoUrl',
+  );
+  @override
+  late final GeneratedColumn<String> photoUrl = GeneratedColumn<String>(
+    'photo_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _timezoneMeta = const VerificationMeta(
     'timezone',
   );
@@ -115,6 +144,21 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _onboardedMeta = const VerificationMeta(
+    'onboarded',
+  );
+  @override
+  late final GeneratedColumn<bool> onboarded = GeneratedColumn<bool>(
+    'onboarded',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("onboarded" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _revMeta = const VerificationMeta('rev');
   @override
   late final GeneratedColumn<int> rev = GeneratedColumn<int>(
@@ -142,6 +186,9 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
   List<GeneratedColumn> get $columns => [
     id,
     displayName,
+    email,
+    phone,
+    photoUrl,
     timezone,
     defaultNotifyMinutes,
     defaultOffsets,
@@ -149,6 +196,7 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     themeMode,
     exactAlarms,
     notificationsEnabled,
+    onboarded,
     rev,
     dirty,
   ];
@@ -174,6 +222,24 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
           data['display_name']!,
           _displayNameMeta,
         ),
+      );
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('photo_url')) {
+      context.handle(
+        _photoUrlMeta,
+        photoUrl.isAcceptableOrUnknown(data['photo_url']!, _photoUrlMeta),
       );
     }
     if (data.containsKey('timezone')) {
@@ -221,6 +287,12 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         ),
       );
     }
+    if (data.containsKey('onboarded')) {
+      context.handle(
+        _onboardedMeta,
+        onboarded.isAcceptableOrUnknown(data['onboarded']!, _onboardedMeta),
+      );
+    }
     if (data.containsKey('rev')) {
       context.handle(
         _revMeta,
@@ -249,6 +321,18 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
+      ),
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      ),
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      photoUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_url'],
       ),
       timezone: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -280,6 +364,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.bool,
         data['${effectivePrefix}notifications_enabled'],
       )!,
+      onboarded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}onboarded'],
+      )!,
       rev: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}rev'],
@@ -303,6 +391,9 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
 class Profile extends DataClass implements Insertable<Profile> {
   final String id;
   final String? displayName;
+  final String? email;
+  final String? phone;
+  final String? photoUrl;
   final String timezone;
   final int defaultNotifyMinutes;
   final List<int> defaultOffsets;
@@ -310,11 +401,15 @@ class Profile extends DataClass implements Insertable<Profile> {
   final String themeMode;
   final bool exactAlarms;
   final bool notificationsEnabled;
+  final bool onboarded;
   final int rev;
   final bool dirty;
   const Profile({
     required this.id,
     this.displayName,
+    this.email,
+    this.phone,
+    this.photoUrl,
     required this.timezone,
     required this.defaultNotifyMinutes,
     required this.defaultOffsets,
@@ -322,6 +417,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     required this.themeMode,
     required this.exactAlarms,
     required this.notificationsEnabled,
+    required this.onboarded,
     required this.rev,
     required this.dirty,
   });
@@ -331,6 +427,15 @@ class Profile extends DataClass implements Insertable<Profile> {
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || displayName != null) {
       map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || email != null) {
+      map['email'] = Variable<String>(email);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    if (!nullToAbsent || photoUrl != null) {
+      map['photo_url'] = Variable<String>(photoUrl);
     }
     map['timezone'] = Variable<String>(timezone);
     map['default_notify_minutes'] = Variable<int>(defaultNotifyMinutes);
@@ -343,6 +448,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     map['theme_mode'] = Variable<String>(themeMode);
     map['exact_alarms'] = Variable<bool>(exactAlarms);
     map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
+    map['onboarded'] = Variable<bool>(onboarded);
     map['rev'] = Variable<int>(rev);
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -354,6 +460,15 @@ class Profile extends DataClass implements Insertable<Profile> {
       displayName: displayName == null && nullToAbsent
           ? const Value.absent()
           : Value(displayName),
+      email: email == null && nullToAbsent
+          ? const Value.absent()
+          : Value(email),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      photoUrl: photoUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoUrl),
       timezone: Value(timezone),
       defaultNotifyMinutes: Value(defaultNotifyMinutes),
       defaultOffsets: Value(defaultOffsets),
@@ -361,6 +476,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       themeMode: Value(themeMode),
       exactAlarms: Value(exactAlarms),
       notificationsEnabled: Value(notificationsEnabled),
+      onboarded: Value(onboarded),
       rev: Value(rev),
       dirty: Value(dirty),
     );
@@ -374,6 +490,9 @@ class Profile extends DataClass implements Insertable<Profile> {
     return Profile(
       id: serializer.fromJson<String>(json['id']),
       displayName: serializer.fromJson<String?>(json['displayName']),
+      email: serializer.fromJson<String?>(json['email']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      photoUrl: serializer.fromJson<String?>(json['photoUrl']),
       timezone: serializer.fromJson<String>(json['timezone']),
       defaultNotifyMinutes: serializer.fromJson<int>(
         json['defaultNotifyMinutes'],
@@ -385,6 +504,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       notificationsEnabled: serializer.fromJson<bool>(
         json['notificationsEnabled'],
       ),
+      onboarded: serializer.fromJson<bool>(json['onboarded']),
       rev: serializer.fromJson<int>(json['rev']),
       dirty: serializer.fromJson<bool>(json['dirty']),
     );
@@ -395,6 +515,9 @@ class Profile extends DataClass implements Insertable<Profile> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'displayName': serializer.toJson<String?>(displayName),
+      'email': serializer.toJson<String?>(email),
+      'phone': serializer.toJson<String?>(phone),
+      'photoUrl': serializer.toJson<String?>(photoUrl),
       'timezone': serializer.toJson<String>(timezone),
       'defaultNotifyMinutes': serializer.toJson<int>(defaultNotifyMinutes),
       'defaultOffsets': serializer.toJson<List<int>>(defaultOffsets),
@@ -402,6 +525,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       'themeMode': serializer.toJson<String>(themeMode),
       'exactAlarms': serializer.toJson<bool>(exactAlarms),
       'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
+      'onboarded': serializer.toJson<bool>(onboarded),
       'rev': serializer.toJson<int>(rev),
       'dirty': serializer.toJson<bool>(dirty),
     };
@@ -410,6 +534,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   Profile copyWith({
     String? id,
     Value<String?> displayName = const Value.absent(),
+    Value<String?> email = const Value.absent(),
+    Value<String?> phone = const Value.absent(),
+    Value<String?> photoUrl = const Value.absent(),
     String? timezone,
     int? defaultNotifyMinutes,
     List<int>? defaultOffsets,
@@ -417,11 +544,15 @@ class Profile extends DataClass implements Insertable<Profile> {
     String? themeMode,
     bool? exactAlarms,
     bool? notificationsEnabled,
+    bool? onboarded,
     int? rev,
     bool? dirty,
   }) => Profile(
     id: id ?? this.id,
     displayName: displayName.present ? displayName.value : this.displayName,
+    email: email.present ? email.value : this.email,
+    phone: phone.present ? phone.value : this.phone,
+    photoUrl: photoUrl.present ? photoUrl.value : this.photoUrl,
     timezone: timezone ?? this.timezone,
     defaultNotifyMinutes: defaultNotifyMinutes ?? this.defaultNotifyMinutes,
     defaultOffsets: defaultOffsets ?? this.defaultOffsets,
@@ -429,6 +560,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     themeMode: themeMode ?? this.themeMode,
     exactAlarms: exactAlarms ?? this.exactAlarms,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    onboarded: onboarded ?? this.onboarded,
     rev: rev ?? this.rev,
     dirty: dirty ?? this.dirty,
   );
@@ -438,6 +570,9 @@ class Profile extends DataClass implements Insertable<Profile> {
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
+      email: data.email.present ? data.email.value : this.email,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      photoUrl: data.photoUrl.present ? data.photoUrl.value : this.photoUrl,
       timezone: data.timezone.present ? data.timezone.value : this.timezone,
       defaultNotifyMinutes: data.defaultNotifyMinutes.present
           ? data.defaultNotifyMinutes.value
@@ -453,6 +588,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       notificationsEnabled: data.notificationsEnabled.present
           ? data.notificationsEnabled.value
           : this.notificationsEnabled,
+      onboarded: data.onboarded.present ? data.onboarded.value : this.onboarded,
       rev: data.rev.present ? data.rev.value : this.rev,
       dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
@@ -463,6 +599,9 @@ class Profile extends DataClass implements Insertable<Profile> {
     return (StringBuffer('Profile(')
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
+          ..write('email: $email, ')
+          ..write('phone: $phone, ')
+          ..write('photoUrl: $photoUrl, ')
           ..write('timezone: $timezone, ')
           ..write('defaultNotifyMinutes: $defaultNotifyMinutes, ')
           ..write('defaultOffsets: $defaultOffsets, ')
@@ -470,6 +609,7 @@ class Profile extends DataClass implements Insertable<Profile> {
           ..write('themeMode: $themeMode, ')
           ..write('exactAlarms: $exactAlarms, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('onboarded: $onboarded, ')
           ..write('rev: $rev, ')
           ..write('dirty: $dirty')
           ..write(')'))
@@ -480,6 +620,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   int get hashCode => Object.hash(
     id,
     displayName,
+    email,
+    phone,
+    photoUrl,
     timezone,
     defaultNotifyMinutes,
     defaultOffsets,
@@ -487,6 +630,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     themeMode,
     exactAlarms,
     notificationsEnabled,
+    onboarded,
     rev,
     dirty,
   );
@@ -496,6 +640,9 @@ class Profile extends DataClass implements Insertable<Profile> {
       (other is Profile &&
           other.id == this.id &&
           other.displayName == this.displayName &&
+          other.email == this.email &&
+          other.phone == this.phone &&
+          other.photoUrl == this.photoUrl &&
           other.timezone == this.timezone &&
           other.defaultNotifyMinutes == this.defaultNotifyMinutes &&
           other.defaultOffsets == this.defaultOffsets &&
@@ -503,6 +650,7 @@ class Profile extends DataClass implements Insertable<Profile> {
           other.themeMode == this.themeMode &&
           other.exactAlarms == this.exactAlarms &&
           other.notificationsEnabled == this.notificationsEnabled &&
+          other.onboarded == this.onboarded &&
           other.rev == this.rev &&
           other.dirty == this.dirty);
 }
@@ -510,6 +658,9 @@ class Profile extends DataClass implements Insertable<Profile> {
 class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<String> id;
   final Value<String?> displayName;
+  final Value<String?> email;
+  final Value<String?> phone;
+  final Value<String?> photoUrl;
   final Value<String> timezone;
   final Value<int> defaultNotifyMinutes;
   final Value<List<int>> defaultOffsets;
@@ -517,12 +668,16 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<String> themeMode;
   final Value<bool> exactAlarms;
   final Value<bool> notificationsEnabled;
+  final Value<bool> onboarded;
   final Value<int> rev;
   final Value<bool> dirty;
   final Value<int> rowid;
   const ProfilesCompanion({
     this.id = const Value.absent(),
     this.displayName = const Value.absent(),
+    this.email = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.photoUrl = const Value.absent(),
     this.timezone = const Value.absent(),
     this.defaultNotifyMinutes = const Value.absent(),
     this.defaultOffsets = const Value.absent(),
@@ -530,6 +685,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.themeMode = const Value.absent(),
     this.exactAlarms = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.onboarded = const Value.absent(),
     this.rev = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -537,6 +693,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   ProfilesCompanion.insert({
     this.id = const Value.absent(),
     this.displayName = const Value.absent(),
+    this.email = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.photoUrl = const Value.absent(),
     this.timezone = const Value.absent(),
     this.defaultNotifyMinutes = const Value.absent(),
     this.defaultOffsets = const Value.absent(),
@@ -544,6 +703,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.themeMode = const Value.absent(),
     this.exactAlarms = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.onboarded = const Value.absent(),
     this.rev = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -551,6 +711,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   static Insertable<Profile> custom({
     Expression<String>? id,
     Expression<String>? displayName,
+    Expression<String>? email,
+    Expression<String>? phone,
+    Expression<String>? photoUrl,
     Expression<String>? timezone,
     Expression<int>? defaultNotifyMinutes,
     Expression<String>? defaultOffsets,
@@ -558,6 +721,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Expression<String>? themeMode,
     Expression<bool>? exactAlarms,
     Expression<bool>? notificationsEnabled,
+    Expression<bool>? onboarded,
     Expression<int>? rev,
     Expression<bool>? dirty,
     Expression<int>? rowid,
@@ -565,6 +729,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (displayName != null) 'display_name': displayName,
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      if (photoUrl != null) 'photo_url': photoUrl,
       if (timezone != null) 'timezone': timezone,
       if (defaultNotifyMinutes != null)
         'default_notify_minutes': defaultNotifyMinutes,
@@ -574,6 +741,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       if (exactAlarms != null) 'exact_alarms': exactAlarms,
       if (notificationsEnabled != null)
         'notifications_enabled': notificationsEnabled,
+      if (onboarded != null) 'onboarded': onboarded,
       if (rev != null) 'rev': rev,
       if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
@@ -583,6 +751,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   ProfilesCompanion copyWith({
     Value<String>? id,
     Value<String?>? displayName,
+    Value<String?>? email,
+    Value<String?>? phone,
+    Value<String?>? photoUrl,
     Value<String>? timezone,
     Value<int>? defaultNotifyMinutes,
     Value<List<int>>? defaultOffsets,
@@ -590,6 +761,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Value<String>? themeMode,
     Value<bool>? exactAlarms,
     Value<bool>? notificationsEnabled,
+    Value<bool>? onboarded,
     Value<int>? rev,
     Value<bool>? dirty,
     Value<int>? rowid,
@@ -597,6 +769,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     return ProfilesCompanion(
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      photoUrl: photoUrl ?? this.photoUrl,
       timezone: timezone ?? this.timezone,
       defaultNotifyMinutes: defaultNotifyMinutes ?? this.defaultNotifyMinutes,
       defaultOffsets: defaultOffsets ?? this.defaultOffsets,
@@ -604,6 +779,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       themeMode: themeMode ?? this.themeMode,
       exactAlarms: exactAlarms ?? this.exactAlarms,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      onboarded: onboarded ?? this.onboarded,
       rev: rev ?? this.rev,
       dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
@@ -618,6 +794,15 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     }
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (photoUrl.present) {
+      map['photo_url'] = Variable<String>(photoUrl.value);
     }
     if (timezone.present) {
       map['timezone'] = Variable<String>(timezone.value);
@@ -642,6 +827,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     if (notificationsEnabled.present) {
       map['notifications_enabled'] = Variable<bool>(notificationsEnabled.value);
     }
+    if (onboarded.present) {
+      map['onboarded'] = Variable<bool>(onboarded.value);
+    }
     if (rev.present) {
       map['rev'] = Variable<int>(rev.value);
     }
@@ -659,6 +847,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     return (StringBuffer('ProfilesCompanion(')
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
+          ..write('email: $email, ')
+          ..write('phone: $phone, ')
+          ..write('photoUrl: $photoUrl, ')
           ..write('timezone: $timezone, ')
           ..write('defaultNotifyMinutes: $defaultNotifyMinutes, ')
           ..write('defaultOffsets: $defaultOffsets, ')
@@ -666,6 +857,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
           ..write('themeMode: $themeMode, ')
           ..write('exactAlarms: $exactAlarms, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('onboarded: $onboarded, ')
           ..write('rev: $rev, ')
           ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
@@ -5217,6 +5409,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$ProfilesTableCreateCompanionBuilder = ProfilesCompanion Function({
   Value<String> id,
   Value<String?> displayName,
+  Value<String?> email,
+  Value<String?> phone,
+  Value<String?> photoUrl,
   Value<String> timezone,
   Value<int> defaultNotifyMinutes,
   Value<List<int>> defaultOffsets,
@@ -5224,6 +5419,7 @@ typedef $$ProfilesTableCreateCompanionBuilder = ProfilesCompanion Function({
   Value<String> themeMode,
   Value<bool> exactAlarms,
   Value<bool> notificationsEnabled,
+  Value<bool> onboarded,
   Value<int> rev,
   Value<bool> dirty,
   Value<int> rowid,
@@ -5231,6 +5427,9 @@ typedef $$ProfilesTableCreateCompanionBuilder = ProfilesCompanion Function({
 typedef $$ProfilesTableUpdateCompanionBuilder = ProfilesCompanion Function({
   Value<String> id,
   Value<String?> displayName,
+  Value<String?> email,
+  Value<String?> phone,
+  Value<String?> photoUrl,
   Value<String> timezone,
   Value<int> defaultNotifyMinutes,
   Value<List<int>> defaultOffsets,
@@ -5238,6 +5437,7 @@ typedef $$ProfilesTableUpdateCompanionBuilder = ProfilesCompanion Function({
   Value<String> themeMode,
   Value<bool> exactAlarms,
   Value<bool> notificationsEnabled,
+  Value<bool> onboarded,
   Value<int> rev,
   Value<bool> dirty,
   Value<int> rowid,
@@ -5259,6 +5459,21 @@ class $$ProfilesTableFilterComposer
 
   ColumnFilters<String> get displayName => $composableBuilder(
     column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoUrl => $composableBuilder(
+    column: $table.photoUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5298,6 +5513,11 @@ class $$ProfilesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get onboarded => $composableBuilder(
+    column: $table.onboarded,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get rev => $composableBuilder(
     column: $table.rev,
     builder: (column) => ColumnFilters(column),
@@ -5325,6 +5545,21 @@ class $$ProfilesTableOrderingComposer
 
   ColumnOrderings<String> get displayName => $composableBuilder(
     column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get photoUrl => $composableBuilder(
+    column: $table.photoUrl,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5363,6 +5598,11 @@ class $$ProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get onboarded => $composableBuilder(
+    column: $table.onboarded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get rev => $composableBuilder(
     column: $table.rev,
     builder: (column) => ColumnOrderings(column),
@@ -5390,6 +5630,15 @@ class $$ProfilesTableAnnotationComposer
     column: $table.displayName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<String> get photoUrl =>
+      $composableBuilder(column: $table.photoUrl, builder: (column) => column);
 
   GeneratedColumn<String> get timezone =>
       $composableBuilder(column: $table.timezone, builder: (column) => column);
@@ -5420,6 +5669,9 @@ class $$ProfilesTableAnnotationComposer
     column: $table.notificationsEnabled,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get onboarded =>
+      $composableBuilder(column: $table.onboarded, builder: (column) => column);
 
   GeneratedColumn<int> get rev =>
       $composableBuilder(column: $table.rev, builder: (column) => column);
@@ -5458,6 +5710,9 @@ class $$ProfilesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
+                Value<String?> email = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> photoUrl = const Value.absent(),
                 Value<String> timezone = const Value.absent(),
                 Value<int> defaultNotifyMinutes = const Value.absent(),
                 Value<List<int>> defaultOffsets = const Value.absent(),
@@ -5465,12 +5720,16 @@ class $$ProfilesTableTableManager
                 Value<String> themeMode = const Value.absent(),
                 Value<bool> exactAlarms = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<bool> onboarded = const Value.absent(),
                 Value<int> rev = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
                 displayName: displayName,
+                email: email,
+                phone: phone,
+                photoUrl: photoUrl,
                 timezone: timezone,
                 defaultNotifyMinutes: defaultNotifyMinutes,
                 defaultOffsets: defaultOffsets,
@@ -5478,6 +5737,7 @@ class $$ProfilesTableTableManager
                 themeMode: themeMode,
                 exactAlarms: exactAlarms,
                 notificationsEnabled: notificationsEnabled,
+                onboarded: onboarded,
                 rev: rev,
                 dirty: dirty,
                 rowid: rowid,
@@ -5486,6 +5746,9 @@ class $$ProfilesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
+                Value<String?> email = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> photoUrl = const Value.absent(),
                 Value<String> timezone = const Value.absent(),
                 Value<int> defaultNotifyMinutes = const Value.absent(),
                 Value<List<int>> defaultOffsets = const Value.absent(),
@@ -5493,12 +5756,16 @@ class $$ProfilesTableTableManager
                 Value<String> themeMode = const Value.absent(),
                 Value<bool> exactAlarms = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<bool> onboarded = const Value.absent(),
                 Value<int> rev = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
                 displayName: displayName,
+                email: email,
+                phone: phone,
+                photoUrl: photoUrl,
                 timezone: timezone,
                 defaultNotifyMinutes: defaultNotifyMinutes,
                 defaultOffsets: defaultOffsets,
@@ -5506,6 +5773,7 @@ class $$ProfilesTableTableManager
                 themeMode: themeMode,
                 exactAlarms: exactAlarms,
                 notificationsEnabled: notificationsEnabled,
+                onboarded: onboarded,
                 rev: rev,
                 dirty: dirty,
                 rowid: rowid,

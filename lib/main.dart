@@ -38,7 +38,7 @@ Future<void> main() async {
 
   runApp(ProviderScope(
     overrides: [servicesProvider.overrideWithValue(services)],
-    child: const DueMateApp(),
+    child: const NoLateFeesApp(),
   ));
 
   await services.start();

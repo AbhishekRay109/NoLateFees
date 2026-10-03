@@ -1,9 +1,9 @@
-import 'package:duemate/data/backup/export_service.dart';
-import 'package:duemate/data/item_repository.dart';
-import 'package:duemate/data/local/database.dart';
-import 'package:duemate/domain/reminder_engine.dart';
-import 'package:duemate/features/dashboard/dashboard_screen.dart';
-import 'package:duemate/features/items/all_items_screen.dart';
+import 'package:nolatefees/data/backup/export_service.dart';
+import 'package:nolatefees/data/item_repository.dart';
+import 'package:nolatefees/data/local/database.dart';
+import 'package:nolatefees/domain/reminder_engine.dart';
+import 'package:nolatefees/features/dashboard/dashboard_screen.dart';
+import 'package:nolatefees/features/items/all_items_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
