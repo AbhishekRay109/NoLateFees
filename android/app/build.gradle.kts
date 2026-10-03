@@ -38,6 +38,10 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Real id from the ADMOB_APP_ID environment variable (set by CI from
+        // env.json); otherwise Google's sample app id, which only serves test ads.
+        manifestPlaceholders["admobAppId"] =
+            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544~3347511713"
     }
 
     signingConfigs {

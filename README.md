@@ -20,6 +20,7 @@ Design notes: `design/duemate-design.md` in the project files (stack choice, dat
 - Settings: default time and schedule, exact-timing opt-in, theme, currency, name
 - Welcome and profile screens; sign in with Google or phone OTP; cloud sync; sign out; delete account
 - Colourful, animated UI with the NoLateFees logo and app icon
+- One small AdMob banner on Home and All Items only, no pop-ups ([docs/ADS_SETUP.md](docs/ADS_SETUP.md))
 - Export CSV, JSON backup and restore
 
 ## Project layout
@@ -46,6 +47,7 @@ assets/logo/           app logo (also the launcher icon)
 test/                  engine, scheduler, repository, sync, Firestore, auth, migration, widgets
 docs/
   FIREBASE_SETUP.md    switch on sign-in and cloud sync
+  ADS_SETUP.md         the banner ad and your AdMob ids
   PHONE_SETUP.md       run it on your Android phone, start to finish
   TESTING.md           how to test, step by step
   RELEASE.md           signing and Play Store release

@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/widgets.dart' show Size;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:flutter/widgets.dart' show Key, Size, SizedBox, Widget;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nolatefees/app_services.dart';
+import 'package:nolatefees/data/ads/ads_service.dart';
 import 'package:nolatefees/data/attachment_service.dart';
 import 'package:nolatefees/data/auth/auth_service.dart';
 import 'package:nolatefees/data/backup/export_service.dart';
@@ -181,6 +183,7 @@ AppServices buildServices({
   NotificationGateway? gateway,
   AuthService? auth,
   RemoteStore? remote,
+  AdsService? ads,
 }) {
   final database = db ?? memoryDb();
   final repo = ItemRepository(database);
@@ -194,6 +197,7 @@ AppServices buildServices({
     attachments: AttachmentService(repo, remote: remote),
     auth: auth,
     remote: remote,
+    ads: ads,
     sync: remote == null ? null : SyncService(database, remote, onPulledChanges: scheduler.reconcile),
   );
 }
@@ -218,4 +222,23 @@ Future<void> settleDb(WidgetTester tester, {int rounds = 5}) async {
     await tester.pump(const Duration(milliseconds: 50));
   }
   await tester.pumpAndSettle();
+}
+
+/// Stands in for AdMob: a 50px placeholder instead of a real banner.
+class FakeAdsService implements AdsService {
+  FakeAdsService({bool ready = true}) : _ready = ValueNotifier(ready);
+
+  final ValueNotifier<bool> _ready;
+  int starts = 0;
+
+  @override
+  ValueListenable<bool> get ready => _ready;
+
+  set isReady(bool v) => _ready.value = v;
+
+  @override
+  Future<void> start() async => starts++;
+
+  @override
+  Widget buildBanner(double width) => SizedBox(key: const Key('fakeBanner'), width: width, height: 50);
 }

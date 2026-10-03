@@ -13,6 +13,10 @@
         android:label="NoLateFees"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- AdMob app id, filled in by android/app/build.gradle.kts (ADMOB_APP_ID; Google's test id by default). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

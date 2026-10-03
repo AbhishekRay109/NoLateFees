@@ -15,6 +15,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
 import 'core/config.dart';
+import 'data/ads/ads_service.dart';
 import 'data/attachment_service.dart';
 import 'data/auth/auth_service.dart';
 import 'data/auth/firebase_auth_service.dart';
@@ -39,6 +40,7 @@ class AppServices {
     this.sync,
     this.auth,
     this.remote,
+    this.ads,
   }) {
     repo.onChanged = () async {
       await scheduler.reconcile();
@@ -55,6 +57,7 @@ class AppServices {
   final SyncService? sync; // null when Firebase is not configured
   final AuthService? auth; // null when Firebase is not configured
   final RemoteStore? remote;
+  final AdsService? ads; // null in tests or when built with ADS_ENABLED=false
   StreamSubscription<dynamic>? _connectivity;
   StreamSubscription<dynamic>? _authSub;
 
@@ -101,6 +104,7 @@ class AppServices {
       sync: sync,
       auth: auth,
       remote: remote,
+      ads: AppConfig.adsEnabled ? AdMobAdsService() : null,
     );
     await services._recordTimezone(location);
     return services;
@@ -114,6 +118,7 @@ class AppServices {
           frequency: const Duration(hours: 24),
           existingWorkPolicy: ExistingPeriodicWorkPolicy.keep);
     }
+    unawaited(ads?.start());
     final s = sync;
     if (s != null) {
       unawaited(s.run().catchError((_) {}));
