@@ -32,9 +32,17 @@ jobs:
       - name: Write env.json
         env:
           APP_ENV_JSON: ${{ secrets.APP_ENV_JSON }}
+        # app_config.json (committed) holds the public Firebase/AdMob ids; the
+        # optional APP_ENV_JSON secret overrides any of them.
         run: |
-          if [ -n "$APP_ENV_JSON" ]; then printf '%s' "$APP_ENV_JSON" > env.json; else echo '{}' > env.json; fi
-          python3 -c "import json; d=json.load(open('env.json')); print('Cloud config keys:', sorted(d) or 'none (offline build)')"
+          python3 - <<'PY'
+          import json, os
+          cfg = json.load(open('app_config.json')) if os.path.exists('app_config.json') else {}
+          if os.environ.get('APP_ENV_JSON', '').strip():
+              cfg.update(json.loads(os.environ['APP_ENV_JSON']))
+          json.dump(cfg, open('env.json', 'w'))
+          print('Config keys:', sorted(cfg) or 'none (offline build with test ads)')
+          PY
       - name: Build release APK
         run: |
           export ADMOB_APP_ID=$(python3 -c "import json; print(json.load(open('env.json')).get('ADMOB_APP_ID', ''))")
