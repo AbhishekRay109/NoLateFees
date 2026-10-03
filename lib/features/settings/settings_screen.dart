@@ -3,12 +3,15 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app_services.dart';
+import '../../core/config.dart';
 import '../../core/format.dart';
 import '../../data/local/database.dart';
 import '../../data/sync/sync_service.dart';
@@ -221,6 +224,8 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
           ],
+          _header(context, 'Contact us'),
+          const _ContactCard(),
         ],
       ),
     );
@@ -315,6 +320,79 @@ class _ProfileCard extends StatelessWidget {
             ]),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Mail link for bug reports and feedback, prefilled with app details.
+Uri feedbackMailUri({String platform = ''}) => Uri(
+      scheme: 'mailto',
+      path: AppConfig.supportEmail,
+      query: 'subject=${Uri.encodeComponent('NoLateFees feedback')}'
+          '&body=${Uri.encodeComponent('Hi NoLateFees team,\n\n\n\n---\nPhone: $platform')}',
+    );
+
+class _ContactCard extends StatelessWidget {
+  const _ContactCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Future<void> copy() async {
+      await Clipboard.setData(const ClipboardData(text: AppConfig.supportEmail));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Email address copied.')));
+      }
+    }
+
+    return Card(
+      key: const Key('contactCard'),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(gradient: Brand.gradient, borderRadius: BorderRadius.circular(14)),
+              child: const Icon(Icons.mail_outline, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Found a bug or have feedback?',
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text('Please feel free to drop us a mail. We read every message.',
+                    style: theme.textTheme.bodySmall),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onLongPress: copy,
+            onTap: () async {
+              final opened = await launchUrl(feedbackMailUri(platform: Platform.operatingSystemVersion))
+                  .catchError((_) => false);
+              if (!opened) await copy();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(children: [
+                Expanded(
+                  child: Text(AppConfig.supportEmail,
+                      style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 15)),
+                ),
+                IconButton(tooltip: 'Copy email', icon: const Icon(Icons.copy, size: 20), onPressed: copy),
+              ]),
+            ),
+          ),
+        ]),
       ),
     );
   }

@@ -4,6 +4,9 @@ import 'package:firebase_core/firebase_core.dart';
 /// docs/FIREBASE_SETUP.md). With no Firebase values the app runs fully
 /// offline: no sign-in, no sync, everything else works.
 class AppConfig {
+  /// Where bug reports and feedback go (Settings → Contact us).
+  static const supportEmail = 'nolatefeesadmin@gmail.com';
+
   static const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
   static const firebaseSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');

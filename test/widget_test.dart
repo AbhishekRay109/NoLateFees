@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nolatefees/app.dart';
 import 'package:nolatefees/app_services.dart';
 import 'package:nolatefees/domain/reminder_engine.dart';
+import 'package:nolatefees/features/settings/settings_screen.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import 'helpers.dart';
@@ -136,5 +138,34 @@ void main() {
     expect(find.text('Asha'), findsOneWidget); // profile card
     expect(find.text('On this phone only'), findsOneWidget);
     expect(find.text('Add Reminder'), findsNothing); // no FAB on Settings
+  });
+
+  testWidgets('Settings ends with a Contact us card with the support email', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    final card = find.byKey(const Key('contactCard'));
+    await tester.scrollUntilVisible(card, 300, scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Found a bug or have feedback?'), findsOneWidget);
+    expect(find.text('nolatefeesadmin@gmail.com'), findsOneWidget);
+
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    await tester.tap(find.byTooltip('Copy email'));
+    await tester.pumpAndSettle();
+    expect(copied, 'nolatefeesadmin@gmail.com');
+    expect(find.text('Email address copied.'), findsOneWidget);
+  });
+
+  test('feedback mail link goes to the support address with a subject', () {
+    final uri = feedbackMailUri(platform: 'Android 16');
+    expect(uri.scheme, 'mailto');
+    expect(uri.path, 'nolatefeesadmin@gmail.com');
+    expect(uri.toString(), contains('subject=NoLateFees%20feedback'));
+    expect(Uri.decodeComponent(uri.toString()), contains('Phone: Android 16'));
   });
 }
