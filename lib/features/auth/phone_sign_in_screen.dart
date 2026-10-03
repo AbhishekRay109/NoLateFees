@@ -161,7 +161,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
               ),
               if (sent != null) ...[
                 const SizedBox(height: 8),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Wrap(alignment: WrapAlignment.spaceBetween, children: [
                   TextButton(
                     onPressed: _busy
                         ? null

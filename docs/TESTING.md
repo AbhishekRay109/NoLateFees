@@ -1,13 +1,13 @@
-# Testing DueMate
+# Testing NoLateFees
 
-Four parts. Parts 1 and 2 need nothing but Flutter and a phone or emulator. Parts 3 and 4 add cloud sync.
+Four parts. Parts 1 and 2 need nothing but Flutter and a phone or emulator. Parts 3 and 4 add sign-in and cloud sync.
 
 | Part | What | Needs |
 |---|---|---|
 | 1 | Automated tests | Flutter |
 | 2 | Manual test on a phone, offline mode | Android phone or emulator |
-| 3 | Set up Supabase | Free Supabase account (or Docker for a local one) |
-| 4 | Manual sync tests | Two devices (phone + emulator is fine) |
+| 3 | Set up Firebase | Free Firebase project ([FIREBASE_SETUP.md](FIREBASE_SETUP.md)) |
+| 4 | Manual sign-in and sync tests | Two devices (phone + emulator is fine) |
 
 ---
 
@@ -16,11 +16,11 @@ Four parts. Parts 1 and 2 need nothing but Flutter and a phone or emulator. Part
 Prerequisites: Flutter stable **3.47 or newer** (`flutter --version`).
 
 ```bash
-cd duemate
+cd nolatefees
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze        # expect: No issues found!
-flutter test           # expect: All tests passed! (41 tests)
+flutter test           # expect: All tests passed! (120 tests)
 ```
 
 What they cover:
@@ -29,9 +29,14 @@ What they cover:
 |---|---|
 | `test/reminder_engine_test.dart` | Your spec example (30 Nov 2026 → 31 Oct, 16 Nov, 23 Nov, 27 Nov, 29 Nov, 30 Nov, 1 Dec at 09:00), custom offsets and times, past alerts dropped, snooze, month-end and leap-year renewals, status buckets, DST, the 60/400 cap |
 | `test/repository_and_scheduler_test.dart` | Save books 7 notifications; edit re-books; delete cancels; renew moves the date, keeps history, re-books; snooze; archive; default schedule; reconcile is idempotent |
-| `test/sync_test.dart` | Phone A → server → phone B; incremental pull; delete beats a stale edit; local unsynced edit survives a pull; family before items; attachments upload before their row; settings sync |
-| `test/export_and_filter_test.dart` | CSV escaping, JSON backup round-trip, dashboard grouping, search/filter/sort |
-| `test/widget_test.dart` | Empty dashboard, dashboard sections and countdowns, the full Add Reminder flow |
+| `test/sync_test.dart` | Phone A → server → phone B; incremental pull; delete beats a stale edit; local unsynced edit survives a pull; family before items; attachments upload before their row; a failed upload doesn't block sync; a broken cursor can't loop; settings and profile sync |
+| `test/export_and_filter_test.dart` | CSV escaping, JSON backup round-trip, old DueMate backups still import, dashboard grouping, search/filter/sort |
+| `test/widget_test.dart` | Welcome screen, offline onboarding, empty dashboard, dashboard sections, counters and countdowns, Add Reminder flow and validation, navigation |
+| `test/auth_test.dart` | Phone number cleanup (+91, 0 prefix, spaces), email check, initials, profile merge after sign-in, onboarding, sign out and delete account |
+| `test/auth_screens_test.dart` | Google sign-in (success, cancel, error), phone OTP (bad number, wrong code, resend timer, auto-verify), profile screen, Settings account card |
+| `test/firestore_sync_test.dart` | The real Firestore backend against an in-memory Firestore: per-user folders, delete wins, incremental pulls, two phones syncing end to end |
+| `test/ui_helpers_test.dart` | Countdown ring, category colours, themes, labels, money formatting, leap-day and month-end renewals |
+| `test/migration_test.dart` | Upgrading a version-1 database keeps data and adds the profile fields |
 
 Run one file: `flutter test test/sync_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
 
@@ -51,12 +56,14 @@ Tick each one. Anything that fails, note the step and what you saw.
 
 **Adding and the dashboard**
 
-- [ ] First launch shows "Nothing to track yet" and an **Add Reminder** button.
+- [ ] First launch shows the welcome screen with the NoLateFees logo. In an offline build it says sign-in switches on once Firebase is connected; tap **Get started**.
+- [ ] "About you": **Let's go** with an empty name says "Please enter your name". Enter a name and a bad email ("abc") → "That email doesn't look right". Fix it → dashboard.
+- [ ] The dashboard has a colourful gradient header greeting you by first name, with three counters (To renew, Overdue, Tracking), and "Nothing to track yet" with an **Add Reminder** button.
 - [ ] Add: pick 🚗 Vehicle → Vehicle Insurance. The name fills in and Renewal pre-selects **Every year**.
 - [ ] Pick a date 5 days from today, tap **SAVE**. Android 13+ asks for notification permission **now** (not at first launch). Allow it.
-- [ ] Dashboard shows it under **NEXT 7 DAYS** with "5 days left", and the big number says 1.
+- [ ] Dashboard shows it under **NEXT 7 DAYS** with "5 days left" in an orange pill and a countdown ring around the icon; **To renew** says 1.
 - [ ] Add an item dated 2 days ago → it appears under **OVERDUE** as "Expired 2 days ago".
-- [ ] Add a Passport ~6 months out → **UPCOMING**. The big number does not count it.
+- [ ] Add a Passport ~6 months out → **UPCOMING**. **To renew** does not count it; **Tracking** does.
 
 **Notifications (the most important part)**
 
@@ -69,7 +76,7 @@ Tick each one. Anything that fails, note the step and what you saw.
 - [ ] **Edit**: change an item's date. Its detail page's "Next reminders" list moves to the new date; the old alert doesn't fire.
 - [ ] **Delete**: delete an item with an alert a few minutes away. It doesn't fire.
 - [ ] **Turn off** Settings → Notifications. Nothing fires. Turn it back on, alerts are back.
-- [ ] Optional, to see what's booked: `adb shell dumpsys alarm | grep -A3 app.duemate` lists pending alarms.
+- [ ] Optional, to see what's booked: `adb shell dumpsys alarm | grep -A3 com.nolatefees.app` lists pending alarms.
 
 **Renewal**
 
@@ -90,63 +97,42 @@ Tick each one. Anything that fails, note the step and what you saw.
 - [ ] Theme: Light / Dark / System all look right.
 - [ ] **Time zone**: Android Settings → System → Date & time → change zone. Return to the app; Settings → Time zone shows the new zone and the next reminders are still at your chosen local time.
 
-**Phones that kill background apps.** On Xiaomi, Oppo, Vivo, Realme or OnePlus, repeat the reboot and swipe-away tests. If alerts don't arrive, set DueMate's battery usage to "No restrictions" and retest. Note which phone.
+**Phones that kill background apps.** On Xiaomi, Oppo, Vivo, Realme or OnePlus, repeat the reboot and swipe-away tests. If alerts don't arrive, set NoLateFees's battery usage to "No restrictions" and retest. Note which phone.
 
 ---
 
-## Part 3: Set up Supabase (cloud sync)
+## Part 3: Set up Firebase (sign-in and cloud sync)
 
-### Option A: hosted (free plan)
-
-1. Create a project at supabase.com. Region: **South Asia (Mumbai)**. Save the database password.
-2. Install the CLI: `npm i -g supabase` (or `brew install supabase/tap/supabase`).
-3. In the `duemate` folder:
-   ```bash
-   supabase login
-   supabase init                       # creates supabase/config.toml; keeps the migrations folder
-   supabase link --project-ref YOUR-PROJECT-REF
-   supabase db push                    # creates tables, RLS, the private "attachments" bucket
-   supabase functions deploy delete-account
-   ```
-4. Dashboard → **Authentication → Sign In / Providers → Email**: enabled. Note the OTP length; the app expects **6 digits**.
-5. Dashboard → **Authentication → Emails → Magic Link** template: make sure the body contains `{{ .Token }}` so the email shows the code, e.g. `Your DueMate code is {{ .Token }}`.
-6. Dashboard → **Project Settings → API Keys**: copy the **Project URL** and the **publishable key** (starts with `sb_publishable_`; older projects call it the `anon` key). Never use the secret/service-role key in the app.
-7. `cp env.example.json env.json`, paste both values in, then:
-   ```bash
-   flutter run --dart-define-from-file=env.json
-   ```
-   `env.json` is git-ignored.
-
-The free plan's built-in email sender is rate-limited to a few emails an hour. Fine for testing; set up custom SMTP (e.g. Resend, free tier) before launch.
-
-### Option B: local Supabase in Docker (no account, unlimited emails)
-
-```bash
-supabase init
-supabase start          # prints API URL and publishable key; first run downloads images
-supabase db reset       # applies supabase/migrations
-```
-
-- In `env.json` use `http://10.0.2.2:54321` as the URL on the Android **emulator** (that's your computer from inside the emulator), or your computer's LAN IP on a real phone.
-- Login codes don't go out by email: open Mailpit at `http://127.0.0.1:54324` to read them.
-- Local email OTP needs the code in the template too: in `supabase/config.toml` under `[auth.email]`, keep `otp_length = 6`.
+Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) steps 1 to 8. Then build the APK from GitHub Actions (or `flutter run --dart-define-from-file=env.json` locally).
 
 ---
 
-## Part 4: Manual sync tests
+## Part 4: Manual sign-in and sync tests
 
-Use two devices signed in to the same email: phone A and emulator B (`flutter run -d <device-id> --dart-define-from-file=env.json` for each).
+Use two devices signed in to the same account: your phone (A) and a second phone, emulator, or the same phone after uninstall/reinstall (B).
 
-- [ ] On A, add 3 items **before** signing in. Settings → **Sign in to back up** → email → code. Within a few seconds Settings shows "Last synced …".
-- [ ] Supabase dashboard → **Table Editor → items**: the 3 rows are there with your user id, `due_date` like `2026-11-30`, `rev` > 0.
-- [ ] Sign in on B with the same email. The 3 items appear, with the same reminders booked (check one item's "Next reminders").
-- [ ] Edit an item's date on A → on B, pull to refresh the dashboard (or reopen the app) → the date changed.
+**Sign-in**
+
+- [ ] Fresh install → welcome screen with the logo, **Continue with Google**, **Continue with phone number** and **Continue without an account**.
+- [ ] **Google** → account picker → "About you" is prefilled with name, email and photo → **Let's go** → dashboard greets you by first name.
+- [ ] Close the account picker without choosing: no error, still on the welcome screen.
+- [ ] **Phone** with the test number `99999 00001`: the code screen shows "+91 99999 00001". Type a wrong code → "That code didn't work". Type `123456` → signs in and opens "About you" with the phone marked **Verified**.
+- [ ] Phone with letters or 5 digits → "Enter a valid mobile number".
+- [ ] "Resend in 30s" counts down, then **Resend code** is tappable.
+- [ ] Settings shows the gradient profile card with your initials or photo, email/phone and "Synced to your account". Tap it → **Edit profile** → change the name → Save → card updates.
+
+**Sync**
+
+- [ ] On A, choose **Continue without an account**, add 3 items, then Settings → **Sign in to back up and sync** → Google. Within a few seconds Settings → Cloud sync shows "Last synced …".
+- [ ] Firebase console → **Firestore → Data → users → (your id) → items**: the 3 documents are there with `due_date` like `2026-11-30` and a `server_updated_at` time.
+- [ ] Sign in on B with the same account. The 3 items appear, with reminders booked (check one item's "Next reminders").
+- [ ] Edit an item's date on A → on B, pull down on the dashboard (or reopen the app) → the date changed.
 - [ ] Renew on B → the history shows on A.
 - [ ] Delete on A while B is in **airplane mode** and edits the same item. Turn B's network on. The item ends up deleted on both.
-- [ ] Add a PDF on A. On B, open the item and tap the file: it downloads and opens. In Supabase **Storage → attachments**, the file sits under `your-user-id/item-id/`.
-- [ ] Security check: create a second account on B. It sees none of the first account's items or files.
-- [ ] **Sign out** on B: its data is removed from the phone and its notifications stop. Sign back in: everything returns.
-- [ ] **Delete account** (Settings → Danger zone) on a throwaway account: its rows and files are gone from the dashboard tables and storage.
+- [ ] Only if Storage is set up: add a PDF on A; on B, open the item and tap the file: it downloads and opens.
+- [ ] Security check: sign in on B with a **different** Google account. It sees none of the first account's items.
+- [ ] **Sign out** on B: its data is removed from the phone, notifications stop, and the welcome screen shows. Sign back in: everything returns.
+- [ ] **Delete account** (Settings → Danger zone) on a throwaway account: its documents disappear from Firestore and the user from Authentication → Users. If it says to sign in again first, sign out, sign in, retry.
 
 ## Reporting a problem
 

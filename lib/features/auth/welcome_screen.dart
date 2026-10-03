@@ -203,7 +203,7 @@ class _GoogleButton extends StatelessWidget {
             : const Row(mainAxisSize: MainAxisSize.min, children: [
                 Text('G', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF4285F4))),
                 SizedBox(width: 12),
-                Text('Continue with Google'),
+                Flexible(child: Text('Continue with Google', overflow: TextOverflow.ellipsis)),
               ]),
       );
 }

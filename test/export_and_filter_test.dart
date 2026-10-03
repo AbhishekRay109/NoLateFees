@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:nolatefees/data/backup/export_service.dart';
 import 'package:nolatefees/data/item_repository.dart';
 import 'package:nolatefees/data/local/database.dart';
@@ -52,6 +53,33 @@ void main() {
 
   test('import rejects other files', () async {
     expect(() => ExportService(db).importJson('{"hello": 1}'), throwsFormatException);
+    expect(() => ExportService(db).importJson('{"app": "SomethingElse", "format": 1}'), throwsFormatException);
+  });
+
+  test('new backups say NoLateFees; old DueMate backups still import', () async {
+    await repo.saveItem(title: 'PUC', categoryKey: 'vehicle.puc', dueDate: DateTime.utc(2027, 1, 1));
+    final json = await ExportService(db).toJson();
+    expect(json, contains('"app": "NoLateFees"'));
+
+    final legacy = json.replaceFirst('"app": "NoLateFees"', '"app": "DueMate"');
+    final other = memoryDb();
+    addTearDown(other.close);
+    expect(await ExportService(other).importJson(legacy), 1);
+  });
+
+  test('backups from a newer format are refused', () async {
+    final json = (await ExportService(db).toJson()).replaceFirst('"format": $backupFormatVersion', '"format": 99');
+    expect(() => ExportService(db).importJson(json), throwsFormatException);
+  });
+
+  test('backup includes name, email and phone from the profile', () async {
+    await repo.updateProfile(const ProfilesCompanion(displayName: Value('Asha'), email: Value('a@b.co')));
+    final other = memoryDb();
+    addTearDown(other.close);
+    await ExportService(other).importJson(await ExportService(db).toJson());
+    final p = await ItemRepository(other).profile();
+    expect(p.displayName, 'Asha');
+    expect(p.email, 'a@b.co');
   });
 
   group('dashboard and list filters', () {

@@ -1,4 +1,4 @@
-package app.duemate.duemate
+package com.nolatefees.app
 
 import io.flutter.embedding.android.FlutterActivity
 

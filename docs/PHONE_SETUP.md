@@ -1,4 +1,4 @@
-# Run DueMate on your Android phone
+# Run NoLateFees on your Android phone
 
 From a fresh computer to the full test pass. Steps 1 to 5 are one-time setup.
 
@@ -34,7 +34,7 @@ From a fresh computer to the full test pass. Steps 1 to 5 are one-time setup.
 ## 3. Get the code ready
 
 ```bash
-cd duemate                # the unzipped folder
+cd nolatefees                # the unzipped folder
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze           # expect: No issues found!
@@ -61,7 +61,7 @@ Debug builds are slow and some phones stop them in the background, which makes n
 # offline mode
 flutter run --release
 
-# or with cloud sync, once env.json has your Supabase URL and publishable key
+# or with sign-in and cloud sync, once env.json has your Firebase values (docs/FIREBASE_SETUP.md)
 flutter run --release --dart-define-from-file=env.json
 ```
 
@@ -72,8 +72,8 @@ After it opens you can unplug the phone. The app stays installed and works on it
 Work through `docs/TESTING.md` in this order and tick each line:
 
 1. **Part 2: Manual test on a phone.** Do the **Notifications** block first, because it matters most: the 2-minute test, tapping the notification, **Renewed**, **Snooze** with the app swiped away, the **reboot** test, then edit, delete and turning notifications off. Then do the Renewal and "Everything else" blocks.
-2. **Battery check.** If your phone is Xiaomi, Oppo, Vivo, Realme, OnePlus or Samsung, repeat the reboot and swipe-away tests. If an alert doesn't arrive: **Settings → Apps → DueMate → Battery → No restrictions** (on Xiaomi also **Autostart → on**), then retest. Note the difference.
-3. **Part 3 + Part 4: cloud sync**, only if you've set up Supabase. Run the release build with `--dart-define-from-file=env.json` on the phone. Use an emulator (Android Studio → Device Manager → create a Pixel device) as the second device:
+2. **Battery check.** If your phone is Xiaomi, Oppo, Vivo, Realme, OnePlus or Samsung, repeat the reboot and swipe-away tests. If an alert doesn't arrive: **Settings → Apps → NoLateFees → Battery → No restrictions** (on Xiaomi also **Autostart → on**), then retest. Note the difference.
+3. **Part 3 + Part 4: cloud sync**, only if you've set up Firebase ([FIREBASE_SETUP.md](FIREBASE_SETUP.md)). Run the release build with `--dart-define-from-file=env.json` on the phone. Use an emulator (Android Studio → Device Manager → create a Pixel device) as the second device:
    ```bash
    flutter devices                                        # note both device ids
    flutter run --release -d <phone-id> --dart-define-from-file=env.json
@@ -86,19 +86,19 @@ Capture the logs while you reproduce the problem:
 
 ```bash
 adb logcat -c                      # clear old logs
-adb logcat | grep -iE "flutter|duemate|notification"
+adb logcat | grep -iE "flutter|nolatefees|notification"
 ```
 
 Useful checks:
 
 | Problem | Check |
 |---|---|
-| No notifications at all | Settings → Apps → DueMate → Notifications is on; in the app, Settings → Notifications is on |
+| No notifications at all | Settings → Apps → NoLateFees → Notifications is on; in the app, Settings → Notifications is on |
 | Notification arrives late | Expected with Exact timing off (a few minutes). Turn on Exact timing in the app's Settings to compare |
 | Nothing after reboot | Battery set to "No restrictions"; on Xiaomi, Autostart on |
-| See what's scheduled | `adb shell dumpsys alarm \| grep -A3 app.duemate` |
+| See what's scheduled | `adb shell dumpsys alarm \| grep -A3 com.nolatefees.app` |
 | Build fails with "SDK not found" or licences | `flutter doctor -v`, then `flutter doctor --android-licenses` |
 | Build fails with Gradle or Java errors | `flutter clean && flutter pub get`, then build again; send the last 30 lines of the error |
-| Sign-in code never arrives | Check spam; the free Supabase email sender only allows a few emails an hour |
+| Sign-in problems | See the troubleshooting table in [FIREBASE_SETUP.md](FIREBASE_SETUP.md#troubleshooting) |
 
 For each failed checklist line, note the phone model and Android version, what you expected, what happened, and attach the log output.

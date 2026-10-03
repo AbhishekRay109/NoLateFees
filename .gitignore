@@ -54,3 +54,7 @@ android/key.properties
 .env
 supabase/.temp/
 env.json
+
+# Test-only signing key, committed on purpose so CI builds keep one SHA-1
+# for Firebase. Never use it for a Play Store release.
+!android/app/ci-test.jks

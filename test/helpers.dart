@@ -209,6 +209,9 @@ void usePhoneScreen(WidgetTester tester) {
 }
 
 /// Lets real database work started by a tap finish, then settles the UI.
+/// Don't await database writes inside tester.runAsync once the app is
+/// pumped: a stream query waiting on the fake clock can hold drift's lock,
+/// and the write then waits forever. Trigger writes through the UI instead.
 Future<void> settleDb(WidgetTester tester, {int rounds = 5}) async {
   for (var i = 0; i < rounds; i++) {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));

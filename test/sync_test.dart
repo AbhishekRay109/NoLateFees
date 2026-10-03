@@ -146,9 +146,75 @@ void main() {
     expect(syncA.current.phase, SyncPhase.signedOut);
   });
 
+  test('a failed file upload keeps the file pending and still syncs everything else', () async {
+    final failing = _FailingFiles();
+    final sync = SyncService(phoneA, failing);
+    final id = await repoA.saveItem(title: 'Car', categoryKey: 'vehicle.insurance', dueDate: DateTime.utc(2027));
+    await repoA.addAttachment(
+        id: 'att-1', itemId: id, fileName: 'p.pdf', mimeType: 'application/pdf', sizeBytes: 10, localPath: '/tmp/p.pdf');
+    await sync.run();
+
+    expect(failing.tables['items']!.keys, [id]);
+    expect(failing.tables['attachments'], isNull); // row waits for its file
+    final att = (await repoA.watchAttachments(id).first).single;
+    expect(att.uploadPending, isTrue);
+    expect(att.dirty, isTrue);
+  });
+
+  test('a backend that ignores the cursor cannot make pull loop forever', () async {
+    final stuck = _StuckCursor();
+    await repoA.saveItem(title: 'X', categoryKey: 'custom.other');
+    await SyncService(phoneA, stuck).run(); // push, then pull returns the same page forever
+    final syncB2 = SyncService(phoneB, stuck);
+    await syncB2.run().timeout(const Duration(seconds: 5));
+    expect(await repoB.activeItems(), hasLength(1));
+    expect(stuck.fetches, lessThan(20));
+  });
+
+  test('sync status goes syncing → idle with a last-synced time', () async {
+    final phases = <SyncPhase>[];
+    final sub = syncA.status.listen((s) => phases.add(s.phase));
+    await repoA.saveItem(title: 'X', categoryKey: 'custom.other');
+    await syncA.run();
+    await Future<void>.delayed(Duration.zero);
+    await sub.cancel();
+    expect(phases, contains(SyncPhase.syncing));
+    expect(syncA.current.phase, isNot(SyncPhase.error));
+    expect(syncA.current.lastSynced, isNotNull);
+  });
+
+  test('profile name, email and phone travel between phones', () async {
+    await repoA.updateProfile(const ProfilesCompanion(
+        displayName: Value('Asha'), email: Value('asha@example.com'), phone: Value('+919876543210')));
+    await syncA.run();
+    await syncB.run();
+    final p = await repoB.profile();
+    expect(p.email, 'asha@example.com');
+    expect(p.phone, '+919876543210');
+    expect(p.onboarded, isFalse); // local only: B still shows its own welcome
+  });
+
   test('time and date helpers round-trip', () {
     expect(minutesToTime(9 * 60), '09:00:00');
     expect(timeToMinutes('18:45:00'), 18 * 60 + 45);
     expect(timeToMinutes(null), isNull);
   });
+}
+
+/// Uploads rows fine but every file upload fails (e.g. Storage not enabled).
+class _FailingFiles extends FakeRemote {
+  @override
+  Future<void> uploadFile(String storagePath, String localPath, String mimeType) async =>
+      throw StateError('File storage is not configured');
+}
+
+/// Returns the same rows whatever the cursor says.
+class _StuckCursor extends FakeRemote {
+  int fetches = 0;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchSince(String table, int sinceRev, int limit) {
+    fetches++;
+    return super.fetchSince(table, 0, limit);
+  }
 }
