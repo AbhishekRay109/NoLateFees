@@ -68,7 +68,7 @@ If you want it: **Build → Storage** → **Get started** → same location → 
 
 ## 7. Give the values to the build
 
-Easiest: put them in `app_config.json` at the repo root (or send them to Claude in the project thread and it will commit the file). These values are not passwords: they ship inside every APK anyway, and the security rules are what protect the data. GitHub may still flag the API key as a "secret"; that alert can be closed as "used in tests / false positive". If you'd rather keep them out of the repo, use the GitHub secret below instead (it overrides the file).
+Keep these values out of the repo. For local runs put them in `env.json` (copy `env.example.json`; `env.json` is git-ignored). For the GitHub build, store them in the `APP_ENV_JSON` repository secret below. The values aren't passwords (they ship inside every APK and the security rules protect the data), but keeping them out of a public repo stops others from building apps against your Firebase project and AdMob account.
 
 
 Open the `google-services.json` you downloaded (any text editor) and find these values:
