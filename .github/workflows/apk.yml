@@ -33,12 +33,12 @@ jobs:
       - name: Write env.json
         env:
           APP_ENV_JSON: ${{ secrets.APP_ENV_JSON }}
-        # app_config.json (committed) holds the public Firebase/AdMob ids; the
-        # optional APP_ENV_JSON secret overrides any of them.
+        # Firebase/AdMob ids come only from the APP_ENV_JSON secret; nothing
+        # project-specific is committed. Without it: offline build, test ads.
         run: |
           python3 - <<'PY'
           import json, os
-          cfg = json.load(open('app_config.json')) if os.path.exists('app_config.json') else {}
+          cfg = {}
           if os.environ.get('APP_ENV_JSON', '').strip():
               cfg.update(json.loads(os.environ['APP_ENV_JSON']))
           json.dump(cfg, open('env.json', 'w'))
