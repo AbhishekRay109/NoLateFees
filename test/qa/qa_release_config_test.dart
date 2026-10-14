@@ -47,28 +47,20 @@ void main() {
     expect(keystores, ['android/app/ci-test.jks'], reason: 'only the public test key is in the repo');
   });
 
-  test('BLD-07 the build config has your Firebase and AdMob ids, not test ones', () {
-    final config = jsonDecode(read('app_config.json')) as Map<String, dynamic>;
+  test('BLD-07 no project-specific Firebase or AdMob ids are committed', () {
+    expect(File('app_config.json').existsSync(), isFalse, reason: 'keep real ids in env.json or the APP_ENV_JSON secret');
+    expect(read('.gitignore'), contains('app_config.json'));
+    final example = jsonDecode(read('env.example.json')) as Map<String, dynamic>;
     for (final key in ['FIREBASE_API_KEY', 'FIREBASE_APP_ID', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_PROJECT_ID',
         'GOOGLE_SERVER_CLIENT_ID', 'ADMOB_APP_ID', 'ADMOB_BANNER_ID']) {
-      expect((config[key] as String?)?.trim(), isNotEmpty, reason: key);
+      expect(example.containsKey(key), isTrue, reason: key);
+      expect((example[key] as String).trim(), isEmpty, reason: 'env.example.json must stay a blank template');
     }
-    expect(config['FIREBASE_API_KEY'], startsWith('AIza'));
-    expect(config['GOOGLE_SERVER_CLIENT_ID'], endsWith('.apps.googleusercontent.com'));
-    expect(config['GOOGLE_SERVER_CLIENT_ID'], startsWith('${config['FIREBASE_MESSAGING_SENDER_ID']}-'),
-        reason: 'the Web client id must belong to the same Firebase project');
-    expect(config['FIREBASE_APP_ID'], contains(':android:'));
-    expect(config['ADMOB_APP_ID'], matches(RegExp(r'^ca-app-pub-\d{16}~\d{10}$')));
-    expect(config['ADMOB_BANNER_ID'], matches(RegExp(r'^ca-app-pub-\d{16}/\d{10}$')));
-    expect(config['ADMOB_APP_ID'], isNot(startsWith('ca-app-pub-3940256099942544')), reason: 'Google test id');
-    expect(config['ADMOB_BANNER_ID'], isNot(startsWith('ca-app-pub-3940256099942544')), reason: 'Google test id');
-    expect((config['ADMOB_APP_ID'] as String).split('~').first, (config['ADMOB_BANNER_ID'] as String).split('/').first,
-        reason: 'banner and app must be from the same AdMob account');
   });
 
   test('BLD-07 the CI build feeds that config and the AdMob app id into the APK', () {
     final ci = read('.github/workflows/apk.yml');
-    expect(ci, contains('app_config.json'));
+    expect(ci, contains('APP_ENV_JSON'));
     expect(ci, contains('--dart-define-from-file=env.json'));
     expect(ci, contains('ADMOB_APP_ID'));
     expect(manifest, contains(r'android:value="${admobAppId}"'));
