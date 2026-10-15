@@ -18,7 +18,7 @@ void main() {
   late AppServices services;
   final today = dateOnly(DateTime.now());
 
-  setUp(() => services = buildServices(ads: FakeAdsService()));
+  setUp(() => services = buildServices());
   tearDown(() => services.db.close());
 
   Future<void> seed(WidgetTester tester, int count) => tester.runAsync(() async {
@@ -33,7 +33,7 @@ void main() {
     usePhoneScreen(tester);
     await tester.runAsync(() async {
       await markOnboarded(services);
-      await services.repo.updateProfile(ProfilesCompanion(themeMode: Value(theme)), synced: false);
+      await services.repo.updateProfile(ProfilesCompanion(themeMode: Value(theme)));
     });
     await tester.pumpWidget(ProviderScope(
       overrides: [servicesProvider.overrideWithValue(services)],

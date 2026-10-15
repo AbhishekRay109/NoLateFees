@@ -1,6 +1,7 @@
-// The phone's database. It is the source of truth for every screen; Firestore
-// only holds a backup copy (see data/sync). Synced tables mirror the
-// documents under users/{uid}/ and add `dirty` (changed here, not pushed yet).
+// The phone's database and the app's only store: every screen reads from it
+// and nothing leaves the phone except the backups people export themselves.
+// Deletes are soft (deleted_at) and every row keeps created/updated times, so
+// a sync backend could be added later without changing the schema's shape.
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -29,21 +30,18 @@ class IntListConverter extends TypeConverter<List<int>, String> {
   String toSql(List<int> value) => value.join(',');
 }
 
-mixin SyncColumns on Table {
-  IntColumn get rev => integer().withDefault(const Constant(0))();
+mixin TimestampColumns on Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
-  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 }
 
-/// Exactly one row, id = 'me'. Synced to `profiles` (id = auth user id).
+/// Exactly one row, id = 'me': the person's name and app settings.
 class Profiles extends Table {
   TextColumn get id => text().withDefault(const Constant('me'))();
   TextColumn get displayName => text().nullable()();
   TextColumn get email => text().nullable()(); // v2
   TextColumn get phone => text().nullable()(); // v2, E.164 e.g. +919876543210
-  TextColumn get photoUrl => text().nullable()(); // v2
   TextColumn get timezone => text().withDefault(const Constant('Asia/Kolkata'))();
   IntColumn get defaultNotifyMinutes =>
       integer().withDefault(const Constant(9 * 60))(); // 09:00
@@ -51,18 +49,16 @@ class Profiles extends Table {
       .map(const IntListConverter())
       .withDefault(const Constant('30,14,7,3,1,0,-1'))();
   TextColumn get currency => text().withDefault(const Constant('INR'))();
-  TextColumn get themeMode => text().withDefault(const Constant('system'))(); // local only
-  BoolColumn get exactAlarms => boolean().withDefault(const Constant(false))(); // local only
-  BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))(); // local only
-  BoolColumn get onboarded => boolean().withDefault(const Constant(false))(); // v2, local only
-  IntColumn get rev => integer().withDefault(const Constant(0))();
-  BoolColumn get dirty => boolean().withDefault(const Constant(false))();
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
+  BoolColumn get exactAlarms => boolean().withDefault(const Constant(false))();
+  BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get onboarded => boolean().withDefault(const Constant(false))(); // v2
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
-class FamilyMembers extends Table with SyncColumns {
+class FamilyMembers extends Table with TimestampColumns {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get relation => text().nullable()();
@@ -73,7 +69,7 @@ class FamilyMembers extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
-class CustomCategories extends Table with SyncColumns {
+class CustomCategories extends Table with TimestampColumns {
   TextColumn get id => text()();
   TextColumn get parentKey => text().nullable()();
   TextColumn get name => text()();
@@ -85,7 +81,7 @@ class CustomCategories extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
-class Items extends Table with SyncColumns {
+class Items extends Table with TimestampColumns {
   TextColumn get id => text()();
   TextColumn get familyMemberId => text().nullable()();
   TextColumn get categoryKey => text()();
@@ -110,7 +106,7 @@ class Items extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
-class Renewals extends Table with SyncColumns {
+class Renewals extends Table with TimestampColumns {
   TextColumn get id => text()();
   TextColumn get itemId => text()();
   TextColumn get previousDue => text().map(const DateOnlyConverter())();
@@ -124,36 +120,25 @@ class Renewals extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
-class Attachments extends Table with SyncColumns {
+class Attachments extends Table with TimestampColumns {
   TextColumn get id => text()();
   TextColumn get itemId => text()();
-  TextColumn get storagePath => text()(); // {userId}/{itemId}/{id}.{ext}; userId filled at upload
   TextColumn get fileName => text()();
   TextColumn get mimeType => text()();
   IntColumn get sizeBytes => integer()();
-  TextColumn get localPath => text().nullable()(); // local only
-  BoolColumn get uploadPending => boolean().withDefault(const Constant(true))(); // local only
+  TextColumn get localPath => text().nullable()(); // private copy in the app's documents folder
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
-/// Local only: which notifications are booked with the OS right now.
+/// Which notifications are booked with the OS right now.
 class ScheduledNotifications extends Table {
   IntColumn get osId => integer().autoIncrement()();
   TextColumn get instanceKey => text().unique()();
   TextColumn get itemId => text()();
   DateTimeColumn get fireAt => dateTime()();
   TextColumn get body => text()();
-}
-
-/// Local only: pull cursor per synced table.
-class SyncState extends Table {
-  TextColumn get tableNameKey => text()();
-  IntColumn get lastRev => integer().withDefault(const Constant(0))();
-
-  @override
-  Set<Column> get primaryKey => {tableNameKey};
 }
 
 @DriftDatabase(tables: [
@@ -164,7 +149,6 @@ class SyncState extends Table {
   Renewals,
   Attachments,
   ScheduledNotifications,
-  SyncState,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
@@ -176,17 +160,13 @@ class AppDatabase extends _$AppDatabase {
       name: 'duemate', native: const DriftNativeOptions(shareAcrossIsolates: true)));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
-          await customStatement(
-              'CREATE INDEX items_due ON items (due_date) WHERE deleted_at IS NULL');
-          await customStatement('CREATE INDEX items_category ON items (category_key)');
-          await customStatement('CREATE INDEX renewals_item ON renewals (item_id)');
-          await customStatement('CREATE INDEX attachments_item ON attachments (item_id)');
+          await _createIndexes();
           await into(profiles).insert(const ProfilesCompanion());
         },
         onUpgrade: (m, from, to) async {
@@ -194,8 +174,17 @@ class AppDatabase extends _$AppDatabase {
             // v2: user info from the login/profile screens.
             await m.addColumn(profiles, profiles.email);
             await m.addColumn(profiles, profiles.phone);
-            await m.addColumn(profiles, profiles.photoUrl);
             await m.addColumn(profiles, profiles.onboarded);
+          }
+          if (from < 3) {
+            // v3: local-only app. Drop the cloud-sync bookkeeping (rev, dirty,
+            // upload flags, pull cursors) and the sign-in photo. Rebuilding
+            // each table keeps its rows; the old sync_state table goes.
+            await customStatement('DROP TABLE IF EXISTS sync_state');
+            for (final t in <TableInfo>[profiles, familyMembers, customCategories, items, renewals, attachments]) {
+              await m.alterTable(TableMigration(t));
+            }
+            await _createIndexes(); // rebuilding a table drops its indexes
           }
         },
         beforeOpen: (details) async {
@@ -203,7 +192,15 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
-  /// Erases everything (used on sign-out so another account can't inherit data).
+  Future<void> _createIndexes() async {
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS items_due ON items (due_date) WHERE deleted_at IS NULL');
+    await customStatement('CREATE INDEX IF NOT EXISTS items_category ON items (category_key)');
+    await customStatement('CREATE INDEX IF NOT EXISTS renewals_item ON renewals (item_id)');
+    await customStatement('CREATE INDEX IF NOT EXISTS attachments_item ON attachments (item_id)');
+  }
+
+  /// Erases everything and starts again with an empty profile.
   Future<void> wipe() => transaction(() async {
         for (final t in allTables) {
           await delete(t).go();

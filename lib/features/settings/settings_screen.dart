@@ -14,13 +14,10 @@ import '../../app_services.dart';
 import '../../core/config.dart';
 import '../../core/format.dart';
 import '../../data/local/database.dart';
-import '../../data/sync/sync_service.dart';
 import '../../widgets/offsets_picker.dart';
 import '../../core/theme.dart';
-import '../../data/auth/auth_service.dart';
 import '../../widgets/brand.dart';
-import '../auth/profile_setup_screen.dart';
-import '../auth/welcome_screen.dart';
+import '../onboarding/profile_setup_screen.dart';
 import 'family_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -31,8 +28,6 @@ class SettingsScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider);
     final repo = services.repo;
     final profile = ref.watch(profileProvider).value;
-    final user = ref.watch(authUserProvider).value;
-    final sync = ref.watch(syncStatusProvider).value;
     if (profile == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     void snack(String t) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
@@ -42,45 +37,13 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          _ProfileCard(profile: profile, user: user),
-          _header(context, 'Account & backup'),
-          if (!services.cloudAvailable)
-            const ListTile(
-              leading: Icon(Icons.cloud_off_outlined),
-              title: Text('Offline mode'),
-              subtitle: Text('Cloud backup is not set up in this build. Use Export to keep a backup.'),
-            )
-          else if (user == null)
-            ListTile(
-              leading: const Icon(Icons.login),
-              title: const Text('Sign in to back up and sync'),
-              subtitle: const Text('Google or phone number. Your reminders stay on this phone until you sign in.'),
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const WelcomeScreen(signInOnly: true))),
-            )
-          else ...[
-            ListTile(
-              leading: const Icon(Icons.cloud_done_outlined),
-              title: const Text('Cloud sync'),
-              subtitle: Text(_syncText(sync)),
-              trailing: IconButton(
-                tooltip: 'Sync now',
-                icon: const Icon(Icons.sync),
-                onPressed: () => services.sync?.run().then((_) => snack('Synced.'), onError: (_) => snack('Sync failed. Check your connection.')),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Sign out'),
-              subtitle: const Text('Removes your data from this phone. It stays in your account.'),
-              onTap: () async {
-                if (await _confirm(context, 'Sign out?', 'Your reminders will be removed from this phone and its notifications stop. Sign in again to get them back.') ==
-                    true) {
-                  await services.signOut();
-                }
-              },
-            ),
-          ],
+          _ProfileCard(profile: profile),
+          _header(context, 'Your data'),
+          const ListTile(
+            leading: Icon(Icons.phone_android),
+            title: Text('Stored on this phone only'),
+            subtitle: Text('No account and no cloud. Export a backup to move your reminders to a new phone.'),
+          ),
           ListTile(
             leading: const Icon(Icons.table_view_outlined),
             title: const Text('Export to CSV'),
@@ -102,7 +65,6 @@ class SettingsScreen extends ConsumerWidget {
               try {
                 final n = await services.export.importJson(await File(files.first.path!).readAsString());
                 await services.scheduler.reconcile();
-                services.sync?.schedule();
                 snack('Imported $n items.');
               } catch (_) {
                 snack('That file is not a NoLateFees backup.');
@@ -116,7 +78,7 @@ class SettingsScreen extends ConsumerWidget {
             value: profile.notificationsEnabled,
             onChanged: (v) async {
               if (v) await services.notifications?.requestPermission();
-              await repo.updateProfile(ProfilesCompanion(notificationsEnabled: Value(v)), synced: false);
+              await repo.updateProfile(ProfilesCompanion(notificationsEnabled: Value(v)));
             },
           ),
           ListTile(
@@ -152,7 +114,7 @@ class SettingsScreen extends ConsumerWidget {
                   snack('Allow "Alarms & reminders" for NoLateFees in system settings, then try again.');
                   return;
                 }
-                await repo.updateProfile(ProfilesCompanion(exactAlarms: Value(v)), synced: false);
+                await repo.updateProfile(ProfilesCompanion(exactAlarms: Value(v)));
               },
             ),
           if (Platform.isAndroid)
@@ -181,7 +143,7 @@ class SettingsScreen extends ConsumerWidget {
                 DropdownMenuItem(value: 'light', child: Text('Light')),
                 DropdownMenuItem(value: 'dark', child: Text('Dark')),
               ],
-              onChanged: (v) => repo.updateProfile(ProfilesCompanion(themeMode: Value(v!)), synced: false),
+              onChanged: (v) => repo.updateProfile(ProfilesCompanion(themeMode: Value(v!))),
             ),
           ),
           ListTile(
@@ -202,42 +164,25 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Time zone'),
             subtitle: Text(profile.timezone),
           ),
-          if (user != null) ...[
-            _header(context, 'Danger zone'),
-            ListTile(
-              leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
-              title: Text('Delete account', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              subtitle: const Text('Permanently deletes your account, reminders and documents.'),
-              onTap: () async {
-                if (await _confirm(context, 'Delete your account?', 'This permanently deletes everything. It cannot be undone.') == true) {
-                  try {
-                    await services.deleteAccount();
-                    snack('Your account was deleted.');
-                  } on AuthFailure catch (e) {
-                    snack(e.code == 'requires-recent-login'
-                        ? 'For safety, sign out, sign in again, then delete the account.'
-                        : e.message);
-                  } catch (_) {
-                    snack('Could not delete the account. Check your connection and try again.');
-                  }
-                }
-              },
-            ),
-          ],
+          _header(context, 'Danger zone'),
+          ListTile(
+            leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
+            title: Text('Erase all data', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            subtitle: const Text('Deletes every reminder, document and setting from this phone.'),
+            onTap: () async {
+              if (await _confirm(context, 'Erase all data?',
+                      'Everything in NoLateFees on this phone is deleted. Export a backup first if you want to keep it.') ==
+                  true) {
+                await services.eraseAllData();
+                snack('All data erased.');
+              }
+            },
+          ),
           _header(context, 'Contact us'),
           const _ContactCard(),
         ],
       ),
     );
-  }
-
-  static String _syncText(SyncStatus? s) {
-    if (s == null) return 'Backed up to your account';
-    return switch (s.phase) {
-      SyncPhase.syncing => 'Syncing…',
-      SyncPhase.error => 'Sync failed. Will retry when you\'re online.',
-      _ => s.lastSynced == null ? 'Backed up to your account' : 'Last synced ${fmtMinutes(s.lastSynced!.hour * 60 + s.lastSynced!.minute)}',
-    };
   }
 
   static Future<void> _share(String content, String fileName, String mime) async {
@@ -266,16 +211,15 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.user});
+  const _ProfileCard({required this.profile});
   final Profile profile;
-  final AppUser? user;
 
   @override
   Widget build(BuildContext context) {
-    final name = profile.displayName ?? user?.name;
+    final name = profile.displayName;
     final details = [
-      if ((profile.email ?? user?.email) != null) profile.email ?? user!.email!,
-      if ((profile.phone ?? user?.phone) != null) formatPhone(profile.phone ?? user!.phone!),
+      if (profile.email != null) profile.email!,
+      if (profile.phone != null) formatPhone(profile.phone!),
     ];
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -296,7 +240,7 @@ class _ProfileCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: UserAvatar(initials: initialsOf(name), photoUrl: profile.photoUrl ?? user?.photoUrl, radius: 28),
+                child: UserAvatar(initials: initialsOf(name), radius: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -311,8 +255,8 @@ class _ProfileCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(8)),
-                    child: Text(user == null ? 'On this phone only' : 'Synced to your account',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                    child: const Text('On this phone only',
+                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ]),
               ),

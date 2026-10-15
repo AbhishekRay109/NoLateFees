@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/ad_slot.dart';
 import '../calendar/calendar_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../items/all_items_screen.dart';
@@ -30,12 +29,7 @@ class _HomeShellState extends State<HomeShell> {
               icon: const Icon(Icons.add),
               label: const Text('Add Reminder'),
             ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Ads only on Home and All Items: never on Calendar or Settings.
-          if (_tab == 0 || _tab == 2) const AdSlot(),
-          NavigationBar(
+      bottomNavigationBar: NavigationBar(
             selectedIndex: _tab,
             onDestinationSelected: (i) => setState(() => _tab = i),
             destinations: const [
@@ -57,8 +51,6 @@ class _HomeShellState extends State<HomeShell> {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 }

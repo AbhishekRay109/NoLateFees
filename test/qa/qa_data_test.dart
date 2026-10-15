@@ -32,7 +32,6 @@ void main() {
 
     test('everything works with no cloud at all and survives closing the app', () async {
       final first = buildServices(db: open());
-      expect(first.sync, isNull);
       await first.saveProfile(name: 'Asha');
       final member = await first.repo.saveFamilyMember(name: 'Ammi', relation: 'parent');
       final id = await first.repo.saveItem(
@@ -165,14 +164,6 @@ void main() {
       await other.repo.saveItem(title: 'Already here', categoryKey: 'finance.rent');
       await other.export.importJson(json);
       expect((await other.repo.activeItems()).map((i) => i.title).toSet(), {'Already here', 'Vet'});
-    });
-
-    test('restored rows are queued for upload to the signed-in account', () async {
-      final json = await seed();
-      final fresh = buildServices();
-      addTearDown(fresh.db.close);
-      await fresh.export.importJson(json);
-      expect((await fresh.repo.activeItems()).single.dirty, isTrue);
     });
   });
 

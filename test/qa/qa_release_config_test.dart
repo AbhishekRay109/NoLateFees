@@ -1,6 +1,6 @@
 // QA sections 1 and 8 (BLD-*, POL-*): checks on the files that decide what
-// ships: app id, version, signing, permissions, ads and configuration.
-import 'dart:convert';
+// ships: app id, version, signing, permissions, and that the app stays
+// local-only (no cloud, sign-in or ad SDKs, no network access).
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +34,7 @@ void main() {
 
   test('BLD-05 no real signing secrets are committed', () {
     final ignore = read('.gitignore');
-    for (final entry in ['android/key.properties', '*.jks', '*.keystore', 'env.json']) {
+    for (final entry in ['android/key.properties', '*.jks', '*.keystore']) {
       expect(ignore, contains(entry));
     }
     expect(File('android/key.properties').existsSync(), isFalse);
@@ -47,30 +47,20 @@ void main() {
     expect(keystores, ['android/app/ci-test.jks'], reason: 'only the public test key is in the repo');
   });
 
-  test('BLD-07 no project-specific Firebase or AdMob ids are committed', () {
-    expect(File('app_config.json').existsSync(), isFalse, reason: 'keep real ids in env.json or the APP_ENV_JSON secret');
-    expect(read('.gitignore'), contains('app_config.json'));
-    final example = jsonDecode(read('env.example.json')) as Map<String, dynamic>;
-    for (final key in ['FIREBASE_API_KEY', 'FIREBASE_APP_ID', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_PROJECT_ID',
-        'GOOGLE_SERVER_CLIENT_ID', 'ADMOB_APP_ID', 'ADMOB_BANNER_ID']) {
-      expect(example.containsKey(key), isTrue, reason: key);
-      expect((example[key] as String).trim(), isEmpty, reason: 'env.example.json must stay a blank template');
+  test('LOC-01 local-only: no cloud, sign-in or ad SDKs are bundled', () {
+    for (final pkg in ['firebase_core', 'firebase_auth', 'cloud_firestore', 'firebase_storage', 'google_sign_in',
+        'google_mobile_ads', 'connectivity_plus', 'http:', 'dio:']) {
+      expect(pubspec, isNot(contains('  $pkg')), reason: '$pkg must not be a dependency');
     }
+    expect(manifest, isNot(contains('com.google.android.gms.ads')));
+    expect(File('app_config.json').existsSync(), isFalse);
+    expect(File('firebase.json').existsSync(), isFalse);
   });
 
-  test('BLD-07 the CI build feeds that config and the AdMob app id into the APK', () {
-    final ci = read('.github/workflows/apk.yml');
-    expect(ci, contains('APP_ENV_JSON'));
-    expect(ci, contains('--dart-define-from-file=env.json'));
-    expect(ci, contains('ADMOB_APP_ID'));
-    expect(manifest, contains(r'android:value="${admobAppId}"'));
-    expect(gradle, contains('manifestPlaceholders["admobAppId"]'));
-  });
-
-  test('POL-04/08 permissions are exactly what the store listing declares', () {
+  test('POL-04/08 permissions are exactly these, and none of them is network access', () {
     final perms = RegExp(r'<uses-permission android:name="([^"]+)"').allMatches(manifest).map((m) => m.group(1)).toSet();
     expect(perms, {
-      'android.permission.INTERNET',
+      // No INTERNET: release builds cannot send data anywhere.
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.RECEIVE_BOOT_COMPLETED',
       'android.permission.SCHEDULE_EXACT_ALARM', // opt-in only; USE_EXACT_ALARM is not allowed for this app type
@@ -87,34 +77,11 @@ void main() {
     expect(manifest, contains('ActionBroadcastReceiver'), reason: 'Renewed / Snooze buttons');
   });
 
-  test('UI-10/POL-10 only banner ads: no pop-up, full-screen, video or app-open ads anywhere', () {
-    final dart = Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
-    for (final f in dart) {
-      final src = f.readAsStringSync();
-      for (final banned in ['InterstitialAd', 'RewardedAd', 'RewardedInterstitialAd', 'AppOpenAd']) {
-        expect(src.contains(banned), isFalse, reason: '$banned in ${f.path}');
-      }
-    }
-  });
-
-  test('POL-10 debug builds fall back to Google test ads, never your real ad unit', () {
-    expect(AppConfig.admobBannerId, startsWith('ca-app-pub-3940256099942544'),
-        reason: 'tests and local runs use the test banner');
-    expect(gradle, contains('ca-app-pub-3940256099942544~3347511713'));
-  });
-
   test('POL-01 support contact is set', () {
     expect(AppConfig.supportEmail, 'nolatefeesadmin@gmail.com');
   });
 
   test('UI-16 the launcher label is NoLateFees', () {
     expect(manifest, contains('android:label="NoLateFees"'));
-  });
-
-  test('SYN-10 the security rules shipped with the app are the ones under test', () {
-    final firebase = jsonDecode(read('firebase.json')) as Map<String, dynamic>;
-    expect(firebase['firestore']['rules'], 'firebase/firestore.rules');
-    expect(firebase['storage']['rules'], 'firebase/storage.rules');
-    expect(File('firebase/rules-test/rules.test.mjs').existsSync(), isTrue);
   });
 }

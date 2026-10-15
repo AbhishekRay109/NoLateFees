@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Sync and cloud backup. -->
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- No INTERNET permission: the app works entirely offline and never sends data anywhere. -->
     <!-- Show reminders (Android 13+ asks the user, after the first item is saved). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Re-book reminders after the phone restarts. -->
@@ -13,10 +12,6 @@
         android:label="NoLateFees"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- AdMob app id, filled in by android/app/build.gradle.kts (ADMOB_APP_ID; Google's test id by default). -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

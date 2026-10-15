@@ -1,11 +1,11 @@
-// "Tell us about you": name (required), email and phone. Prefilled from
-// Google or the verified phone number. Also used for "Edit profile".
+// "Tell us about you": name (required), email and phone, kept on this phone.
+// Also used for "Edit profile".
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_services.dart';
-import '../../data/auth/auth_service.dart';
+import '../../core/format.dart';
 import '../../widgets/brand.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -25,7 +25,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _phone = TextEditingController();
   bool _loaded = false;
   bool _busy = false;
-  bool _phoneVerified = false;
 
   @override
   void initState() {
@@ -34,16 +33,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   Future<void> _load() async {
-    final services = ref.read(servicesProvider);
-    final p = await services.repo.profile();
-    final user = services.auth?.currentUser;
+    final p = await ref.read(repoProvider).profile();
     if (!mounted) return;
     setState(() {
-      _name.text = p.displayName ?? user?.name ?? '';
-      _email.text = p.email ?? user?.email ?? '';
-      final phone = p.phone ?? user?.phone;
-      _phone.text = phone == null ? '' : formatPhone(phone);
-      _phoneVerified = user?.phone != null && user!.phone == phone;
+      _name.text = p.displayName ?? '';
+      _email.text = p.email ?? '';
+      _phone.text = p.phone == null ? '' : formatPhone(p.phone!);
       _loaded = true;
     });
   }
@@ -86,11 +81,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       Center(
                         child: ValueListenableBuilder(
                           valueListenable: _name,
-                          builder: (_, v, _) => UserAvatar(
-                            initials: initialsOf(v.text),
-                            photoUrl: ref.read(servicesProvider).auth?.currentUser?.photoUrl,
-                            radius: 44,
-                          ),
+                          builder: (_, v, _) => UserAvatar(initials: initialsOf(v.text), radius: 44),
                         ),
                       ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
                       const SizedBox(height: 16),
@@ -124,14 +115,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       TextFormField(
                         key: const Key('profilePhoneField'),
                         controller: _phone,
-                        readOnly: _phoneVerified,
                         keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: 'Phone (optional)',
-                          prefixIcon: const Icon(Icons.phone_iphone),
-                          suffixIcon: _phoneVerified ? const Icon(Icons.verified, color: Colors.green) : null,
-                          helperText: _phoneVerified ? 'Verified' : null,
-                        ),
+                        decoration: const InputDecoration(
+                            labelText: 'Phone (optional)', prefixIcon: Icon(Icons.phone_iphone)),
                         validator: (v) =>
                             (v ?? '').trim().isEmpty || normalizePhone(v!) != null ? null : 'Enter a valid mobile number',
                       ),

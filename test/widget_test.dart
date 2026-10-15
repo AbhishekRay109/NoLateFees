@@ -36,13 +36,14 @@ void main() {
   testWidgets('a fresh install opens on the welcome screen', (tester) async {
     await pumpApp(tester, onboarded: false);
     expect(find.text('Never pay a late fee again.'), findsOneWidget);
-    // No Firebase in this build: offline note and a plain "Get started".
-    expect(find.textContaining('Firebase is connected'), findsOneWidget);
+    // No login: a privacy note and a plain "Get started".
+    expect(find.text('Private by design'), findsOneWidget);
     expect(find.text('Get started'), findsOneWidget);
-    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.textContaining('Google'), findsNothing);
+    expect(find.textContaining('Sign in'), findsNothing);
   });
 
-  testWidgets('offline onboarding: name, then home screen with a greeting', (tester) async {
+  testWidgets('onboarding: name, then home screen with a greeting', (tester) async {
     await pumpApp(tester, onboarded: false);
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
@@ -134,7 +135,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Offline mode'), findsOneWidget);
+    expect(find.text('Stored on this phone only'), findsOneWidget);
     expect(find.text('Asha'), findsOneWidget); // profile card
     expect(find.text('On this phone only'), findsOneWidget);
     expect(find.text('Add Reminder'), findsNothing); // no FAB on Settings

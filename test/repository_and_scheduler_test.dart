@@ -42,7 +42,6 @@ void main() {
     expect(gateway.booked.values.every((b) => b.payload == id), isTrue);
     expect((await db.select(db.scheduledNotifications).get()).length, 7);
     final item = (await repo.getItem(id))!;
-    expect(item.dirty, isTrue);
     expect(item.dueDate, DateTime.utc(2026, 11, 30));
   });
 
@@ -57,8 +56,7 @@ void main() {
     expect(gateway.booked, isEmpty);
     expect(await db.select(db.scheduledNotifications).get(), isEmpty);
     final tomb = (await repo.getItem(id))!;
-    expect(tomb.deletedAt, isNotNull); // soft delete, so it syncs
-    expect(tomb.dirty, isTrue);
+    expect(tomb.deletedAt, isNotNull); // soft delete
   });
 
   test('reconcile is idempotent', () async {
@@ -105,7 +103,7 @@ void main() {
     expect(gateway.booked, isEmpty);
     await repo.setArchived(id, false);
     expect(gateway.booked.length, 7);
-    await repo.updateProfile(const ProfilesCompanion(notificationsEnabled: Value(false)), synced: false);
+    await repo.updateProfile(const ProfilesCompanion(notificationsEnabled: Value(false)));
     expect(gateway.booked, isEmpty);
   });
 

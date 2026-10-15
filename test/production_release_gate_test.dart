@@ -104,39 +104,5 @@ void main() {
         expect(history.single.amountMinor, 125000);
       },
     );
-
-    test(
-      '[P0] synced renewal arrives on another device and deletion propagates',
-      () async {
-        final remote = FakeRemote();
-        final phoneA = buildServices(remote: remote, gateway: FakeGateway());
-        final phoneB = buildServices(remote: remote, gateway: FakeGateway());
-        addTearDown(phoneA.db.close);
-        addTearDown(phoneB.db.close);
-
-        final id = await phoneA.repo.saveItem(
-          title: 'Cross-device release check',
-          categoryKey: 'documents.passport',
-          dueDate: DateTime.utc(2030, 5, 1),
-          reminderOffsets: const [30, 1],
-        );
-        await phoneA.repo.renew(id, newDue: DateTime.utc(2031, 5, 1));
-        await phoneA.sync!.run();
-        await phoneB.sync!.run();
-
-        final onB = (await phoneB.repo.getItem(id))!;
-        final historyOnB = await phoneB.repo.watchRenewals(id).first;
-        expect(onB.dueDate, DateTime.utc(2031, 5, 1));
-        expect(historyOnB, hasLength(1));
-        expect(historyOnB.single.previousDue, DateTime.utc(2030, 5, 1));
-
-        await phoneA.repo.deleteItem(id);
-        await phoneA.sync!.run();
-        await phoneB.sync!.run();
-
-        expect(await phoneB.repo.activeItems(), isEmpty);
-        expect((await phoneB.repo.getItem(id))!.deletedAt, isNotNull);
-      },
-    );
   });
 }

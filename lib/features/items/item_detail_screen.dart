@@ -166,14 +166,14 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
             ListTile(
               leading: Icon(a.mimeType == 'application/pdf' ? Icons.picture_as_pdf_outlined : Icons.image_outlined),
               title: Text(a.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${(a.sizeBytes / 1024).ceil()} KB${a.uploadPending ? ' · not backed up yet' : ''}'),
+              subtitle: Text('${(a.sizeBytes / 1024).ceil()} KB'),
               onTap: () async {
                 try {
                   await services.attachments.open(a);
                 } on AttachmentUnavailable {
-                  _snack('Sign in to download this file.');
+                  _snack('This file is no longer on this phone.');
                 } catch (_) {
-                  _snack('Could not open this file. Check your connection.');
+                  _snack('Could not open this file.');
                 }
               },
               trailing: IconButton(
