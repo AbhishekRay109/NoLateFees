@@ -1,0 +1,146 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"><style>
+.canvas{position:relative;height:880px}
+.t{position:absolute;background:#fff;border-radius:14px;box-shadow:0 6px 22px rgba(99,102,241,.12),0 1px 2px rgba(30,27,75,.06);overflow:hidden;width:330px;border:1px solid #E6E4F7}
+.t h2{font-size:15.5px;font-weight:700;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:baseline}
+.t h2 small{font-weight:500;font-size:11.5px;opacity:.85}
+.t .d{font-size:11.5px;color:#5B5A7A;padding:7px 14px 6px;border-bottom:1px solid #EEEDF8;background:#FBFAFF;line-height:1.35}
+.r{display:flex;align-items:center;font-size:12.6px;padding:4.2px 14px;border-bottom:1px solid #F3F2FB;gap:8px}
+.r:last-child{border-bottom:0}
+.r .n{flex:1;font-family:'DejaVu Sans Mono',monospace;font-size:12px;color:#1E1B4B}
+.r .ty{color:#8886A6;font-size:11.5px}
+.k{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 4px;min-width:22px;text-align:center}
+.pk{background:#FEF3C7;color:#92400E}.fk{background:#E0E7FF;color:#3730A3}.uq{background:#DCFCE7;color:#166534}.ix{background:#FCE7F3;color:#9D174D}
+.blank{min-width:22px}
+.ts{color:#8886A6;font-style:italic}
+.indigo h2{background:#6366F1}.violet h2{background:#8B5CF6}.pink h2{background:#EC4899}.orange h2{background:#F97316}.teal h2{background:#14B8A6}.slate h2{background:#64748B}.blue h2{background:#3B82F6}
+svg{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.legend{position:absolute;right:0;bottom:0;width:430px;background:#fff;border:1px solid #E6E4F7;border-radius:14px;padding:14px 18px;font-size:12.5px;color:#3F3D63;line-height:1.7}
+.legend h3{font-size:13px;margin-bottom:4px;color:#1E1B4B}
+.code{position:absolute;left:0;bottom:0;width:330px;background:#1E1B4B;color:#E0E7FF;border-radius:14px;padding:14px 16px;font-size:12px;line-height:1.6}
+.code h3{font-size:13px;color:#fff;margin-bottom:4px}
+.code span{color:#F9A8D4}
+</style></head><body><div class="page">
+<div class="title"><div class="logo">₹</div><h1>NoLateFees · on-device database</h1></div>
+<div class="sub">SQLite through Drift (schema v3). The phone is the only store: no account, no server, no network permission.</div>
+<div class="canvas" id="c">
+
+<div class="t violet" id="profiles" style="left:0;top:0">
+ <h2>profiles <small>exactly one row</small></h2>
+ <div class="d">The person's name and app settings. The default reminder schedule lives here.</div>
+ <div class="r"><span class="k pk">PK</span><span class="n">id = 'me'</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">display_name, email, phone</span><span class="ty">text?</span></div>
+ <div class="r"><span class="blank"></span><span class="n">timezone</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">default_notify_minutes</span><span class="ty">int</span></div>
+ <div class="r"><span class="blank"></span><span class="n">default_offsets</span><span class="ty">'30,14,7,3,1,0,-1'</span></div>
+ <div class="r"><span class="blank"></span><span class="n">currency, theme_mode</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">exact_alarms, notifications_enabled</span><span class="ty">bool</span></div>
+ <div class="r"><span class="blank"></span><span class="n">onboarded</span><span class="ty">bool</span></div>
+</div>
+
+<div class="t blue" id="family" style="left:0;top:360px">
+ <h2>family_members <small>people &amp; vehicles</small></h2>
+ <div class="d">"Dad", "Ammi", "the bike". Items can belong to one.</div>
+ <div class="r" data-a="family.id"><span class="k pk">PK</span><span class="n">id</span><span class="ty">uuid v7</span></div>
+ <div class="r"><span class="blank"></span><span class="n">name</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">relation, emoji</span><span class="ty">text?</span></div>
+ <div class="r"><span class="blank"></span><span class="n">sort_order</span><span class="ty">int</span></div>
+ <div class="r"><span class="blank"></span><span class="n ts">created_at · updated_at · deleted_at</span></div>
+</div>
+
+<div class="t teal" id="categories" style="left:0;top:590px">
+ <h2>categories <small>user-made only</small></h2>
+ <div class="d">40+ built-in categories live in code; this table holds custom ones.</div>
+ <div class="r" data-a="cat.id"><span class="k pk">PK</span><span class="n">id</span><span class="ty">uuid v7</span></div>
+ <div class="r"><span class="blank"></span><span class="n">parent_key, name, icon</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n ts">created_at · updated_at · deleted_at</span></div>
+</div>
+
+<div class="t indigo" id="items" style="left:520px;top:0;width:360px">
+ <h2>items <small>the things that expire</small></h2>
+ <div class="d">Insurance, PUC, passport, recharge, rent… One row per thing, with its next due date and reminder plan.</div>
+ <div class="r" data-a="items.id"><span class="k pk">PK</span><span class="n">id</span><span class="ty">uuid v7</span></div>
+ <div class="r" data-a="items.fam"><span class="k fk">FK</span><span class="n">family_member_id</span><span class="ty">text?</span></div>
+ <div class="r" data-a="items.cat"><span class="k ix">IX</span><span class="n">category_key</span><span class="ty">'vehicle.puc' | custom id</span></div>
+ <div class="r"><span class="blank"></span><span class="n">title</span><span class="ty">text(1..120)</span></div>
+ <div class="r"><span class="blank"></span><span class="n">provider, reference_no, notes</span><span class="ty">text?</span></div>
+ <div class="r"><span class="blank"></span><span class="n">amount_minor, currency</span><span class="ty">int paise · ISO</span></div>
+ <div class="r"><span class="blank"></span><span class="n">start_date</span><span class="ty">'yyyy-mm-dd'</span></div>
+ <div class="r"><span class="k ix">IX</span><span class="n">due_date</span><span class="ty">'yyyy-mm-dd'</span></div>
+ <div class="r"><span class="blank"></span><span class="n">recurrence_unit, recurrence_every</span><span class="ty">enum · int</span></div>
+ <div class="r"><span class="blank"></span><span class="n">reminder_offsets</span><span class="ty">'30,7,1' | null=default</span></div>
+ <div class="r"><span class="blank"></span><span class="n">notify_minutes</span><span class="ty">int? (540 = 09:00)</span></div>
+ <div class="r"><span class="blank"></span><span class="n">snoozed_until</span><span class="ty">timestamp?</span></div>
+ <div class="r"><span class="blank"></span><span class="n">archived</span><span class="ty">bool</span></div>
+ <div class="r"><span class="blank"></span><span class="n">extra</span><span class="ty">JSON</span></div>
+ <div class="r"><span class="blank"></span><span class="n ts">created_at · updated_at · deleted_at</span></div>
+</div>
+
+<div class="t orange" id="renewals" style="left:1070px;top:0">
+ <h2>renewals <small>append-only history</small></h2>
+ <div class="d">Written when someone taps "Renewed": old date → new date, what it cost.</div>
+ <div class="r"><span class="k pk">PK</span><span class="n">id</span><span class="ty">uuid v7</span></div>
+ <div class="r" data-a="ren.item"><span class="k fk">FK</span><span class="n">item_id</span><span class="ty">IX</span></div>
+ <div class="r"><span class="blank"></span><span class="n">previous_due → new_due</span><span class="ty">dates</span></div>
+ <div class="r"><span class="blank"></span><span class="n">amount_minor, provider, notes</span><span class="ty">?</span></div>
+ <div class="r"><span class="blank"></span><span class="n">renewed_at</span><span class="ty">timestamp</span></div>
+ <div class="r"><span class="blank"></span><span class="n ts">created_at · updated_at · deleted_at</span></div>
+</div>
+
+<div class="t pink" id="attachments" style="left:1070px;top:290px">
+ <h2>attachments <small>PDF / photo</small></h2>
+ <div class="d">Files are copied into the app's private folder (max 10 MB each).</div>
+ <div class="r"><span class="k pk">PK</span><span class="n">id</span><span class="ty">uuid v7</span></div>
+ <div class="r" data-a="att.item"><span class="k fk">FK</span><span class="n">item_id</span><span class="ty">IX</span></div>
+ <div class="r"><span class="blank"></span><span class="n">file_name, mime_type</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">size_bytes</span><span class="ty">int</span></div>
+ <div class="r"><span class="blank"></span><span class="n">local_path</span><span class="ty">text?</span></div>
+ <div class="r"><span class="blank"></span><span class="n ts">created_at · updated_at · deleted_at</span></div>
+</div>
+
+<div class="t slate" id="sched" style="left:1070px;top:560px">
+ <h2>scheduled_notifications <small>derived</small></h2>
+ <div class="d">What is booked with Android right now. reconcile() diffs it against what should be booked.</div>
+ <div class="r"><span class="k pk">PK</span><span class="n">os_id</span><span class="ty">autoincrement</span></div>
+ <div class="r"><span class="k uq">UQ</span><span class="n">instance_key</span><span class="ty">item:date:offset</span></div>
+ <div class="r" data-a="sch.item"><span class="k fk">FK</span><span class="n">item_id</span><span class="ty">text</span></div>
+ <div class="r"><span class="blank"></span><span class="n">fire_at, body</span><span class="ty">timestamp · text</span></div>
+</div>
+
+<div class="code" style="left:520px;width:360px;bottom:0">
+ <h3>Design choices</h3>
+ <span>Soft deletes</span> + created/updated times on every user table, so cloud sync can be added later without reshaping data.<br>
+ <span>Dates as text</span> ('2026-11-30') so a due date never shifts a day across time zones.<br>
+ <span>Money in minor units</span> (paise), never floats.<br>
+ <span>UUID v7 ids</span> made on the phone: sortable, collision-free.
+</div>
+
+<svg id="s"></svg>
+</div>
+<div class="foot"><span><b>Indexes</b> items_due (partial: not deleted) · items_category · renewals_item · attachments_item</span><span><b>Migrations</b> v1 → v2 profile fields · v2 → v3 drop cloud-sync columns</span><span><b>File</b> duemate.sqlite, shared across isolates</span></div>
+</div>
+<script>
+const c=document.getElementById('c').getBoundingClientRect(), s=document.getElementById('s');
+const box=sel=>{const r=document.querySelector(sel).getBoundingClientRect();return {l:r.left-c.left,r:r.right-c.left,y:r.top-c.top+r.height/2}};
+function link(a,b,color,dash,label){
+ const A=box(a),B=box(b);
+ let x1,x2; if(A.r<B.l){x1=A.r;x2=B.l}else{x1=A.l;x2=B.r}
+ const dir=x2>x1?1:-1, mx=(x1+x2)/2;
+ const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+ p.setAttribute('d',`M${x1},${A.y} C${mx},${A.y} ${mx},${B.y} ${x2},${B.y}`);
+ p.setAttribute('fill','none');p.setAttribute('stroke',color);p.setAttribute('stroke-width','2.2');if(dash)p.setAttribute('stroke-dasharray','6 5');s.appendChild(p);
+ // one bar at source
+ const one=document.createElementNS('http://www.w3.org/2000/svg','path');
+ const ox=x1+dir*10; one.setAttribute('d',`M${ox},${A.y-7} L${ox},${A.y+7}`);one.setAttribute('stroke',color);one.setAttribute('stroke-width','2.2');s.appendChild(one);
+ // crow's foot at target
+ const cf=document.createElementNS('http://www.w3.org/2000/svg','path');
+ const bx=x2-dir*12; cf.setAttribute('d',`M${bx},${B.y} L${x2},${B.y-8} M${bx},${B.y} L${x2},${B.y} M${bx},${B.y} L${x2},${B.y+8} M${bx-dir*4},${B.y-7} L${bx-dir*4},${B.y+7}`);
+ cf.setAttribute('stroke',color);cf.setAttribute('stroke-width','2.2');cf.setAttribute('fill','none');s.appendChild(cf);
+ if(label){const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',mx);t.setAttribute('y',(A.y+B.y)/2-8);t.setAttribute('text-anchor','middle');t.setAttribute('font-size','12');t.setAttribute('font-family','Inter');t.setAttribute('fill','#5B5A7A');
+ t.setAttribute('paint-order','stroke');t.setAttribute('stroke','#F8F7FF');t.setAttribute('stroke-width','5');t.textContent=label;s.appendChild(t)}
+}
+link('[data-a="family.id"]','[data-a="items.fam"]','#3B82F6',false,'owns 0..n');
+link('[data-a="cat.id"]','[data-a="items.cat"]','#14B8A6',true,'custom category');
+link('[data-a="items.id"]','[data-a="ren.item"]','#F97316',false,'renewed 0..n');
+link('[data-a="items.id"]','[data-a="att.item"]','#EC4899',false,'files 0..n');
+link('[data-a="items.id"]','[data-a="sch.item"]','#64748B',false,'alerts 0..n');
+</script></body></html>

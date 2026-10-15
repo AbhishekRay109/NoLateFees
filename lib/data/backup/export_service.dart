@@ -1,5 +1,6 @@
-// Export to CSV/JSON and import a JSON backup. The JSON backup is the only
-// backup for people who never sign in, so import must round-trip it exactly.
+// Export to CSV/JSON and import a JSON backup. Everything lives on the phone,
+// so the JSON backup is how data moves to a new phone: import must
+// round-trip it exactly.
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -7,7 +8,7 @@ import 'package:drift/drift.dart';
 import '../../domain/categories.dart';
 import '../../domain/reminder_engine.dart';
 import '../local/database.dart';
-import '../sync/sync_service.dart';
+import 'backup_codec.dart';
 
 const backupFormatVersion = 1;
 
@@ -41,7 +42,6 @@ class ExportService {
   /// Full backup (items, renewals, family, custom categories, settings).
   /// Attachment files are not included.
   Future<String> toJson() async {
-    const uid = 'backup';
     final profile = await db.select(db.profiles).getSingle();
     final renewals = await (db.select(db.renewals)..where((r) => r.deletedAt.isNull())).get();
     final family = await (db.select(db.familyMembers)..where((f) => f.deletedAt.isNull())).get();
@@ -50,11 +50,11 @@ class ExportService {
       'app': 'NoLateFees',
       'format': backupFormatVersion,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
-      'profile': profileToJson(profile, uid)..remove('id'),
-      'family_members': [for (final f in family) _strip(familyToJson(f, uid))],
-      'categories': [for (final c in cats) _strip(categoryToJson(c, uid))],
-      'items': [for (final i in await _items()) _strip(itemToJson(i, uid))],
-      'renewals': [for (final r in renewals) _strip(renewalToJson(r, uid))],
+      'profile': profileToJson(profile),
+      'family_members': [for (final f in family) familyToJson(f)],
+      'categories': [for (final c in cats) categoryToJson(c)],
+      'items': [for (final i in await _items()) itemToJson(i)],
+      'renewals': [for (final r in renewals) renewalToJson(r)],
     });
   }
 
@@ -68,35 +68,33 @@ class ExportService {
     }
     final now = DateTime.now().toUtc().toIso8601String();
     Map<String, dynamic> prep(Object? row) =>
-        {...(row as Map<String, dynamic>), 'rev': 0, 'updated_at': now, 'created_at': row['created_at'] ?? now};
+        {...(row as Map<String, dynamic>), 'updated_at': now, 'created_at': row['created_at'] ?? now};
 
     final items = (data['items'] as List?) ?? const [];
     await db.transaction(() async {
       for (final f in (data['family_members'] as List?) ?? const []) {
         await db.into(db.familyMembers).insertOnConflictUpdate(
-            familyFromJson(prep(f)).copyWith(dirty: const Value(true)));
+            familyFromJson(prep(f)));
       }
       for (final c in (data['categories'] as List?) ?? const []) {
         await db.into(db.customCategories).insertOnConflictUpdate(
-            categoryFromJson(prep(c)).copyWith(dirty: const Value(true)));
+            categoryFromJson(prep(c)));
       }
       for (final i in items) {
-        await db.into(db.items).insertOnConflictUpdate(itemFromJson(prep(i)).copyWith(dirty: const Value(true)));
+        await db.into(db.items).insertOnConflictUpdate(itemFromJson(prep(i)));
       }
       for (final r in (data['renewals'] as List?) ?? const []) {
         await db.into(db.renewals).insertOnConflictUpdate(
-            renewalFromJson(prep(r)).copyWith(dirty: const Value(true)));
+            renewalFromJson(prep(r)));
       }
       final p = data['profile'];
       if (p is Map<String, dynamic>) {
         await (db.update(db.profiles)..where((x) => x.id.equals('me')))
-            .write(profileFromJson({...p, 'rev': 0}).copyWith(dirty: const Value(true)));
+            .write(profileFromJson(p));
       }
     });
     return items.length;
   }
-
-  static Map<String, dynamic> _strip(Map<String, dynamic> m) => m..remove('user_id');
 
   static String _csvCell(String v) =>
       (v.contains(',') || v.contains('"') || v.contains('\n')) ? '"${v.replaceAll('"', '""')}"' : v;

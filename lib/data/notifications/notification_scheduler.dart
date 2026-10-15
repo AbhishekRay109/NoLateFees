@@ -1,7 +1,7 @@
 // reconcile(): the one function that books notifications with the OS.
 // It compares what *should* be scheduled (from the reminder engine) with what
 // *is* scheduled (the scheduled_notifications table) and fixes the difference.
-// Safe to call any number of times: after every write, after sync, on app
+// Safe to call any number of times: after every write, after an import, on app
 // open, on timezone change and from the daily background job.
 import 'package:drift/drift.dart';
 import 'package:timezone/timezone.dart' as tz;

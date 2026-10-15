@@ -1,6 +1,5 @@
-// All reads and writes the screens do. Every write lands in SQLite first,
-// marks the row dirty, then calls [onChanged] so notifications are
-// reconciled and a sync is queued. The network is never on the save path.
+// All reads and writes the screens do. Every write lands in SQLite, then
+// calls [onChanged] so notifications are reconciled. There is no network.
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -107,7 +106,6 @@ class ItemRepository {
       notes: Value(_blankToNull(notes)),
       familyMemberId: Value(familyMemberId),
       updatedAt: Value(now),
-      dirty: const Value(true),
     );
     if (id == null) {
       await db.into(db.items).insert(companion.copyWith(createdAt: Value(now)));
@@ -118,21 +116,21 @@ class ItemRepository {
     return itemId;
   }
 
-  /// Soft delete: the tombstone syncs so other phones delete it too.
+  /// Soft delete: the row stays with deleted_at set and every screen hides it.
   Future<void> deleteItem(String id) async {
     final now = _clock();
     await db.transaction(() async {
       await (db.update(db.items)..where((i) => i.id.equals(id))).write(
-          ItemsCompanion(deletedAt: Value(now), updatedAt: Value(now), dirty: const Value(true)));
+          ItemsCompanion(deletedAt: Value(now), updatedAt: Value(now)));
       await (db.update(db.attachments)..where((a) => a.itemId.equals(id))).write(
-          AttachmentsCompanion(deletedAt: Value(now), updatedAt: Value(now), dirty: const Value(true)));
+          AttachmentsCompanion(deletedAt: Value(now), updatedAt: Value(now)));
     });
     await _changed();
   }
 
   Future<void> setArchived(String id, bool archived) async {
     await (db.update(db.items)..where((i) => i.id.equals(id))).write(ItemsCompanion(
-        archived: Value(archived), updatedAt: Value(_clock()), dirty: const Value(true)));
+        archived: Value(archived), updatedAt: Value(_clock())));
     await _changed();
   }
 
@@ -169,8 +167,7 @@ class ItemRepository {
         snoozedUntil: const Value(null),
         archived: const Value(false),
         updatedAt: Value(now),
-        dirty: const Value(true),
-      ));
+        ));
     });
     await _changed();
   }
@@ -178,7 +175,7 @@ class ItemRepository {
   Future<void> snooze(String itemId, Duration by) async {
     final now = _clock();
     await (db.update(db.items)..where((i) => i.id.equals(itemId))).write(ItemsCompanion(
-        snoozedUntil: Value(now.add(by)), updatedAt: Value(now), dirty: const Value(true)));
+        snoozedUntil: Value(now.add(by)), updatedAt: Value(now)));
     await _changed();
   }
 
@@ -192,11 +189,9 @@ class ItemRepository {
     required int sizeBytes,
     required String localPath,
   }) async {
-    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'bin';
     await db.into(db.attachments).insert(AttachmentsCompanion.insert(
           id: id,
           itemId: itemId,
-          storagePath: '$itemId/$id.$ext', // user id is prefixed at upload
           fileName: fileName,
           mimeType: mimeType,
           sizeBytes: sizeBytes,
@@ -208,13 +203,9 @@ class ItemRepository {
   Future<void> deleteAttachment(String id) async {
     await (db.update(db.attachments)..where((a) => a.id.equals(id))).write(
         AttachmentsCompanion(
-            deletedAt: Value(_clock()), updatedAt: Value(_clock()), dirty: const Value(true)));
+            deletedAt: Value(_clock()), updatedAt: Value(_clock())));
     await _changed();
   }
-
-  Future<void> setAttachmentLocalPath(String id, String path) =>
-      (db.update(db.attachments)..where((a) => a.id.equals(id)))
-          .write(AttachmentsCompanion(localPath: Value(path)));
 
   // ---------------------------------------------------------------- family & categories
 
@@ -226,8 +217,7 @@ class ItemRepository {
           relation: Value(relation),
           emoji: Value(emoji),
           updatedAt: Value(_clock()),
-          dirty: const Value(true),
-        ));
+            ));
     await _changed();
     return memberId;
   }
@@ -236,9 +226,9 @@ class ItemRepository {
     final now = _clock();
     await db.transaction(() async {
       await (db.update(db.familyMembers)..where((f) => f.id.equals(id)))
-          .write(FamilyMembersCompanion(deletedAt: Value(now), updatedAt: Value(now), dirty: const Value(true)));
+          .write(FamilyMembersCompanion(deletedAt: Value(now), updatedAt: Value(now)));
       await (db.update(db.items)..where((i) => i.familyMemberId.equals(id))).write(
-          ItemsCompanion(familyMemberId: const Value(null), updatedAt: Value(now), dirty: const Value(true)));
+          ItemsCompanion(familyMemberId: const Value(null), updatedAt: Value(now)));
     });
     await _changed();
   }
@@ -253,9 +243,8 @@ class ItemRepository {
 
   // ---------------------------------------------------------------- settings
 
-  Future<void> updateProfile(ProfilesCompanion changes, {bool synced = true}) async {
-    await (db.update(db.profiles)..where((p) => p.id.equals('me')))
-        .write(synced ? changes.copyWith(dirty: const Value(true)) : changes);
+  Future<void> updateProfile(ProfilesCompanion changes) async {
+    await (db.update(db.profiles)..where((p) => p.id.equals('me'))).write(changes);
     await _changed();
   }
 

@@ -27,30 +27,10 @@ jobs:
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter test
-      # Sign-in and cloud sync are optional. Add a repository secret named
-      # APP_ENV_JSON holding the Firebase values (see docs/FIREBASE_SETUP.md).
-      # Without it the APK runs fully offline.
-      - name: Write env.json
-        env:
-          APP_ENV_JSON: ${{ secrets.APP_ENV_JSON }}
-        # Firebase/AdMob ids come only from the APP_ENV_JSON secret; nothing
-        # project-specific is committed. Without it: offline build, test ads.
-        run: |
-          python3 - <<'PY'
-          import json, os
-          cfg = {}
-          if os.environ.get('APP_ENV_JSON', '').strip():
-              cfg.update(json.loads(os.environ['APP_ENV_JSON']))
-          json.dump(cfg, open('env.json', 'w'))
-          print('Config keys:', sorted(cfg) or 'none (offline build with test ads)')
-          PY
       - name: Build release APK
         run: |
-          export ADMOB_APP_ID=$(python3 -c "import json; print(json.load(open('env.json')).get('ADMOB_APP_ID', ''))")
-          flutter build apk --release --dart-define-from-file=env.json
+          flutter build apk --release
           cp build/app/outputs/flutter-apk/app-release.apk NoLateFees.apk
-      - name: Show signing fingerprints (add these to Firebase)
-        run: keytool -list -v -keystore android/app/ci-test.jks -storepass nolatefees-test | grep -E 'SHA1|SHA256'
       - uses: actions/upload-artifact@v4
         with:
           name: nolatefees-apk

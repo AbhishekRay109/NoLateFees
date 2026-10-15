@@ -100,28 +100,20 @@ class _GradientButtonState extends State<GradientButton> {
   }
 }
 
-/// Round avatar with the person's photo or initials on the brand gradient.
+/// Round avatar with the person's initials on the brand gradient.
 class UserAvatar extends StatelessWidget {
-  const UserAvatar({super.key, required this.initials, this.photoUrl, this.radius = 24});
+  const UserAvatar({super.key, required this.initials, this.radius = 24});
   final String initials;
-  final String? photoUrl;
   final double radius;
 
   @override
-  Widget build(BuildContext context) {
-    final url = photoUrl;
-    return Container(
-      width: radius * 2,
-      height: radius * 2,
-      decoration: const BoxDecoration(shape: BoxShape.circle, gradient: Brand.gradient),
-      clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      child: url != null && url.startsWith('http')
-          ? Image.network(url, fit: BoxFit.cover, width: radius * 2, height: radius * 2,
-              errorBuilder: (_, _, _) => _letters())
-          : _letters(),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: const BoxDecoration(shape: BoxShape.circle, gradient: Brand.gradient),
+        alignment: Alignment.center,
+        child: _letters(),
+      );
 
   Widget _letters() => Text(initials,
       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: radius * 0.75));

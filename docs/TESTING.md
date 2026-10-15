@@ -1,50 +1,33 @@
 # Testing NoLateFees
 
-Four parts. Parts 1 and 2 need nothing but Flutter and a phone or emulator. Parts 3 and 4 add sign-in and cloud sync.
-
-| Part | What | Needs |
-|---|---|---|
-| 1 | Automated tests | Flutter |
-| 2 | Manual test on a phone, offline mode | Android phone or emulator |
-| 3 | Set up Firebase | Free Firebase project ([FIREBASE_SETUP.md](FIREBASE_SETUP.md)) |
-| 4 | Manual sign-in and sync tests | Two devices (phone + emulator is fine) |
-
----
+Two parts: the automated suite, which needs only Flutter, and a manual pass on a phone or emulator.
 
 ## Part 1: Automated tests
 
 Prerequisites: Flutter stable **3.47 or newer** (`flutter --version`).
 
 ```bash
-cd nolatefees
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze        # expect: No issues found!
 flutter test           # expect: All tests passed!
 ```
 
-What they cover:
+GitHub CI (`.github/workflows/ci.yml`) runs `analyze` and `test` on every pull request and on `main`.
 
 | File | Covers |
 |---|---|
-| `test/reminder_engine_test.dart` | Your spec example (30 Nov 2026 → 31 Oct, 16 Nov, 23 Nov, 27 Nov, 29 Nov, 30 Nov, 1 Dec at 09:00), custom offsets and times, past alerts dropped, snooze, month-end and leap-year renewals, status buckets, DST, the 60/400 cap |
+| `test/reminder_engine_test.dart` | The spec example (30 Nov 2026 → 31 Oct, 16 Nov, 23 Nov, 27 Nov, 29 Nov, 30 Nov, 1 Dec at 09:00), custom offsets and times, past alerts dropped, snooze, month-end and leap-year renewals, status buckets, DST, the 60/400 cap |
 | `test/repository_and_scheduler_test.dart` | Save books 7 notifications; edit re-books; delete cancels; renew moves the date, keeps history, re-books; snooze; archive; default schedule; reconcile is idempotent |
-| `test/sync_test.dart` | Phone A → server → phone B; incremental pull; delete beats a stale edit; local unsynced edit survives a pull; family before items; attachments upload before their row; a failed upload doesn't block sync; a broken cursor can't loop; settings and profile sync |
 | `test/export_and_filter_test.dart` | CSV escaping, JSON backup round-trip, old DueMate backups still import, dashboard grouping, search/filter/sort |
-| `test/widget_test.dart` | Welcome screen, offline onboarding, empty dashboard, dashboard sections, counters and countdowns, Add Reminder flow and validation, navigation |
-| `test/auth_test.dart` | Phone number cleanup (+91, 0 prefix, spaces), email check, initials, profile merge after sign-in, onboarding, sign out and delete account |
-| `test/auth_screens_test.dart` | Google sign-in (success, cancel, error), phone OTP (bad number, wrong code, resend timer, auto-verify), profile screen, Settings account card |
-| `test/firestore_sync_test.dart` | The real Firestore backend against an in-memory Firestore: per-user folders, delete wins, incremental pulls, two phones syncing end to end |
+| `test/widget_test.dart` | Welcome screen (no login), onboarding, empty dashboard, dashboard sections, counters and countdowns, Add Reminder flow and validation, navigation, Contact us |
+| `test/format_test.dart` | Phone number cleanup (+91, 0 prefix, spaces), email check, initials, onboarding, erase all data |
 | `test/ui_helpers_test.dart` | Countdown ring, category colours, themes, labels, money formatting, leap-day and month-end renewals |
-| `test/ads_test.dart` | The banner appears only on Home and All Items, above the navigation, never on forms, sign-in, Calendar or Settings, and takes no space until loaded |
-| `test/migration_test.dart` | Upgrading a version-1 database keeps data and adds the profile fields |
-| `test/qa/` | The release QA suite, one test per case id in [PRODUCTION_QA_CHECKLIST.md](PRODUCTION_QA_CHECKLIST.md): reminders, notifications, backup and import, accounts and sync, screens (themes, large text, accessibility) and release config. See [QA_AUTOMATION.md](QA_AUTOMATION.md) for what is automated and what stays manual |
-| `firebase/rules-test/` | Firestore and Storage security rules in the Firebase emulator: `cd firebase/rules-test && npm ci && npm test` (Java 21 + Node 22) |
-| `test/production_release_gate_test.dart` | Release-critical journeys: edits replace obsolete alerts, deletion cancels alerts, renewal history and relationships survive backup/restore, and sync carries renewal then deletion across devices |
+| `test/migration_test.dart` | Upgrading a v1 database and a v2 (cloud sync era) database keeps every row; v3 drops the sync columns |
+| `test/production_release_gate_test.dart` | Critical journeys: edits replace obsolete alerts, deletion cancels alerts, renewal history and relationships survive backup and restore |
+| `test/qa/` | One test per QA case id: reminders (REM), notifications (NTF), screens, themes, large text and accessibility (UI), backup and import (DAT), build config and the local-only guarantees (BLD, POL, LOC). `flutter test --plain-name "NTF-17"` runs one case |
 
-Run the production release regression gates: `flutter test test/production_release_gate_test.dart`. Run one file: `flutter test test/sync_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
-
-The production release regression tests run as part of `flutter test` on every release. They complement, but do not replace, the physical-device and Play Console steps in [PRODUCTION_QA_CHECKLIST.md](PRODUCTION_QA_CHECKLIST.md).
+Run one file: `flutter test test/migration_test.dart`. Run one test: `flutter test --plain-name "renewal moves"`.
 
 ---
 
@@ -54,7 +37,7 @@ The production release regression tests run as part of `flutter test` on every r
 
 1. Install Android Studio, open **Device Manager**, create a Pixel emulator with a recent Android image. Or plug in an Android phone with **USB debugging** on (Settings → About phone → tap Build number 7 times → Developer options → USB debugging).
 2. `flutter devices` should list it.
-3. `flutter run` (no `--dart-define`), so the app runs fully offline with no account.
+3. `flutter run`.
 
 ### Checklist
 
@@ -62,7 +45,7 @@ Tick each one. Anything that fails, note the step and what you saw.
 
 **Adding and the dashboard**
 
-- [ ] First launch shows the welcome screen with the NoLateFees logo. In an offline build it says sign-in switches on once Firebase is connected; tap **Get started**.
+- [ ] First launch shows the welcome screen with the NoLateFees logo, three feature rows (one says "Private by design") and **Get started**. There is no sign-in.
 - [ ] "About you": **Let's go** with an empty name says "Please enter your name". Enter a name and a bad email ("abc") → "That email doesn't look right". Fix it → dashboard.
 - [ ] The dashboard has a colourful gradient header greeting you by first name, with three counters (To renew, Overdue, Tracking), and "Nothing to track yet" with an **Add Reminder** button.
 - [ ] Add: pick 🚗 Vehicle → Vehicle Insurance. The name fills in and Renewal pre-selects **Every year**.
@@ -91,12 +74,6 @@ Tick each one. Anything that fails, note the step and what you saw.
 - [ ] Renew a monthly item due on 31 Jan: the next date is 28 Feb (29 in a leap year).
 - [ ] A "Doesn't repeat" item asks you to pick the new date.
 
-**Ads**
-
-- [ ] Home and All Items show a slim "Test Ad" banner just above the bottom bar; the Add Reminder button sits above it.
-- [ ] Calendar, Settings, Add/Edit Reminder and the welcome screens have no ad. No pop-up ad ever appears.
-- [ ] Airplane mode, then reopen the app: the banner strip disappears completely (no empty gap).
-
 **Everything else**
 
 - [ ] Item → **Add PDF / photo** → pick a PDF. It's listed; tapping opens it. A file over 10 MB is refused with a message.
@@ -107,45 +84,8 @@ Tick each one. Anything that fails, note the step and what you saw.
 - [ ] Settings → **Export backup (JSON)** → save it. Uninstall the app, reinstall, **Import backup** → everything is back, with notifications.
 - [ ] **Airplane mode**: add, edit, renew, delete. Everything works.
 - [ ] Theme: Light / Dark / System all look right.
+- [ ] Settings → **Erase all data** → confirm. The app returns to the welcome screen and no old notifications fire.
 - [ ] **Time zone**: Android Settings → System → Date & time → change zone. Return to the app; Settings → Time zone shows the new zone and the next reminders are still at your chosen local time.
 
 **Phones that kill background apps.** On Xiaomi, Oppo, Vivo, Realme or OnePlus, repeat the reboot and swipe-away tests. If alerts don't arrive, set NoLateFees's battery usage to "No restrictions" and retest. Note which phone.
 
----
-
-## Part 3: Set up Firebase (sign-in and cloud sync)
-
-Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) steps 1 to 8. Then build the APK from GitHub Actions (or `flutter run --dart-define-from-file=env.json` locally).
-
----
-
-## Part 4: Manual sign-in and sync tests
-
-Use two devices signed in to the same account: your phone (A) and a second phone, emulator, or the same phone after uninstall/reinstall (B).
-
-**Sign-in**
-
-- [ ] Fresh install → welcome screen with the logo, **Continue with Google**, **Continue with phone number** and **Continue without an account**.
-- [ ] **Google** → account picker → "About you" is prefilled with name, email and photo → **Let's go** → dashboard greets you by first name.
-- [ ] Close the account picker without choosing: no error, still on the welcome screen.
-- [ ] **Phone** with the test number `99999 00001`: the code screen shows "+91 99999 00001". Type a wrong code → "That code didn't work". Type `123456` → signs in and opens "About you" with the phone marked **Verified**.
-- [ ] Phone with letters or 5 digits → "Enter a valid mobile number".
-- [ ] "Resend in 30s" counts down, then **Resend code** is tappable.
-- [ ] Settings shows the gradient profile card with your initials or photo, email/phone and "Synced to your account". Tap it → **Edit profile** → change the name → Save → card updates.
-
-**Sync**
-
-- [ ] On A, choose **Continue without an account**, add 3 items, then Settings → **Sign in to back up and sync** → Google. Within a few seconds Settings → Cloud sync shows "Last synced …".
-- [ ] Firebase console → **Firestore → Data → users → (your id) → items**: the 3 documents are there with `due_date` like `2026-11-30` and a `server_updated_at` time.
-- [ ] Sign in on B with the same account. The 3 items appear, with reminders booked (check one item's "Next reminders").
-- [ ] Edit an item's date on A → on B, pull down on the dashboard (or reopen the app) → the date changed.
-- [ ] Renew on B → the history shows on A.
-- [ ] Delete on A while B is in **airplane mode** and edits the same item. Turn B's network on. The item ends up deleted on both.
-- [ ] Only if Storage is set up: add a PDF on A; on B, open the item and tap the file: it downloads and opens.
-- [ ] Security check: sign in on B with a **different** Google account. It sees none of the first account's items.
-- [ ] **Sign out** on B: its data is removed from the phone, notifications stop, and the welcome screen shows. Sign back in: everything returns.
-- [ ] **Delete account** (Settings → Danger zone) on a throwaway account: its documents disappear from Firestore and the user from Authentication → Users. If it says to sign in again first, sign out, sign in, retry.
-
-## Reporting a problem
-
-For each failure, note: the checklist line, phone model and Android version, what you expected, what happened. `flutter run` output or `adb logcat | grep -i flutter` from the moment it happened helps most.

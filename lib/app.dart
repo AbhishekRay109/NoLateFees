@@ -5,7 +5,7 @@ import 'app_services.dart';
 import 'core/theme.dart';
 import 'data/local/database.dart';
 import 'data/notifications/local_notifications.dart';
-import 'features/auth/welcome_screen.dart';
+import 'features/onboarding/welcome_screen.dart';
 import 'features/items/item_detail_screen.dart';
 import 'features/shell/home_shell.dart';
 

@@ -1,0 +1,9 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:#F8F7FF;color:#1E1B4B;width:1600px;-webkit-font-smoothing:antialiased}
+.page{position:relative;padding:48px 56px 40px}
+.title{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6366F1,#8B5CF6 55%,#EC4899);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:20px}
+h1{font-family:'Inter Display',Inter,sans-serif;font-size:34px;font-weight:800;letter-spacing:-.5px}
+.sub{color:#5B5A7A;font-size:16px;margin-left:60px;margin-bottom:32px}
+.foot{margin-top:28px;color:#5B5A7A;font-size:13.5px;display:flex;gap:28px;flex-wrap:wrap}
+.foot b{color:#1E1B4B}

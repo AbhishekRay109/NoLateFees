@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 // first upload would make it the app's upload key.
 if (keystoreProperties.isEmpty() &&
     gradle.startParameter.taskNames.any { it.contains("bundleRelease", ignoreCase = true) }) {
-    throw GradleException("Release bundles need android/key.properties with your upload key (see docs/RELEASE.md).")
+    throw GradleException("Release bundles need android/key.properties with your own upload key.")
 }
 
 android {
@@ -45,16 +45,12 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Real id from the ADMOB_APP_ID environment variable (set by CI from
-        // env.json); otherwise Google's sample app id, which only serves test ads.
-        manifestPlaceholders["admobAppId"] =
-            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544~3347511713"
     }
 
     signingConfigs {
         // Test-only key committed to the repo (password is public) so every
-        // build has the same SHA-1/SHA-256, which Firebase needs for Google and
-        // phone sign-in. Real Play Store releases use android/key.properties.
+        // CI build is signed the same way and installs over the previous one.
+        // A real store release would use android/key.properties instead.
         create("ciTest") {
             storeFile = file("ci-test.jks")
             storePassword = "nolatefees-test"
@@ -76,8 +72,7 @@ android {
             signingConfig = signingConfigs.getByName("ciTest")
         }
         release {
-            // Uses android/key.properties when present (see docs/RELEASE.md),
-            // otherwise the shared test key.
+            // Uses android/key.properties when present, otherwise the shared test key.
             signingConfig = if (keystoreProperties.isEmpty()) signingConfigs.getByName("ciTest")
                             else signingConfigs.getByName("release")
         }

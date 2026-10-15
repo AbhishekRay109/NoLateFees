@@ -61,9 +61,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             final items = _member == null ? all : all.where((i) => i.familyMemberId == _member).toList();
             final groups = groupByStatus(items, today);
             final count = needsAttention(items, today);
-            return RefreshIndicator(
-              onRefresh: () async => ref.read(servicesProvider).sync?.run().catchError((_) {}),
-              child: ListView(
+            return ListView(
                 padding: const EdgeInsets.only(bottom: 96),
                 children: [
                   _Hero(
@@ -119,7 +117,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           .slideY(begin: 0.12, curve: Curves.easeOut),
                   ],
                 ],
-              ),
             );
           },
         ),

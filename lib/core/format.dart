@@ -30,3 +30,41 @@ String offsetLabel(int d) {
   if (d == -1) return '1 day after';
   return d > 0 ? '$d days before' : '${-d} days after';
 }
+
+/// Turns what people type into E.164. Ten-digit numbers are assumed to be
+/// Indian (+91). Returns null if it can't be a valid number.
+String? normalizePhone(String input, {String defaultCountryCode = '+91'}) {
+  var s = input.replaceAll(RegExp(r'[\s\-().]'), '');
+  if (s.isEmpty) return null;
+  if (s.startsWith('00')) s = '+${s.substring(2)}';
+  if (!s.startsWith('+')) {
+    if (s.startsWith('0')) s = s.substring(1);
+    if (defaultCountryCode == '+91' && s.length == 12 && s.startsWith('91')) {
+      s = '+$s';
+    } else {
+      s = '$defaultCountryCode$s';
+    }
+  }
+  if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(s)) return null;
+  if (s.startsWith('+91') && !RegExp(r'^\+91[6-9]\d{9}$').hasMatch(s)) return null;
+  return s;
+}
+
+bool isValidEmail(String input) =>
+    RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(input.trim());
+
+/// "+919876543210" → "+91 98765 43210" for display.
+String formatPhone(String e164) {
+  if (RegExp(r'^\+91\d{10}$').hasMatch(e164)) {
+    return '+91 ${e164.substring(3, 8)} ${e164.substring(8)}';
+  }
+  return e164;
+}
+
+/// "Sumaiya Mansoor" → "SM", for avatars.
+String initialsOf(String? name) {
+  final parts = (name ?? '').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '🙂';
+  if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+  return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+}

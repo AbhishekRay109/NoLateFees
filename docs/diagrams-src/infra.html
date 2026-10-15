@@ -1,0 +1,98 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"><style>
+.canvas{position:relative;height:900px}
+.zone{position:absolute;border-radius:20px;padding:16px 18px}
+.zone > .zt{font-size:13px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.zone > .zs{font-size:12.5px;color:#5B5A7A;margin-bottom:10px}
+.today{background:#fff;border:2px solid #6366F1;box-shadow:0 10px 30px rgba(99,102,241,.15)}
+.today > .zt{color:#4F46E5}
+.future{background:rgba(255,255,255,.6);border:2px dashed #A5A3C9}
+.future > .zt{color:#7C3AED}
+.n{position:absolute;background:#fff;border-radius:12px;padding:10px 12px;border:1px solid #E6E4F7;box-shadow:0 3px 10px rgba(30,27,75,.06);font-size:12px;color:#5B5A7A;line-height:1.38}
+.n b{display:block;font-size:14px;color:#1E1B4B;margin-bottom:2px}
+.n.f{border:1.5px dashed #B9B6DC;background:#FDFCFF}
+.n .tag{display:inline-block;font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;margin-top:5px;margin-right:3px}
+.built{background:#DCFCE7;color:#166534}.v2{background:#EDE9FE;color:#6D28D9}.v3{background:#FCE7F3;color:#9D174D}
+.ico{display:inline-flex;width:26px;height:26px;border-radius:8px;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;float:right;margin-left:6px}
+.phone{position:absolute;left:24px;top:64px;width:396px;height:760px;border-radius:38px;background:#1E1B4B;padding:14px}
+.screen{background:#F8F7FF;border-radius:28px;height:100%;padding:16px 14px;position:relative}
+.screen .hd{text-align:center;font-weight:800;font-size:15px;color:#1E1B4B;margin-bottom:10px}
+.layer{border-radius:12px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#3F3D63;line-height:1.38;background:#fff;border:1px solid #E6E4F7}
+.layer b{display:block;font-size:13.5px;color:#1E1B4B}
+.layer.hi{background:linear-gradient(135deg,#6366F1,#8B5CF6 60%,#EC4899);color:#F5F3FF;border:0}
+.layer.hi b{color:#fff}
+.layer.f{border:1.5px dashed #B9B6DC;background:#FDFCFF}
+svg{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.lbl{font:600 11.5px Inter;fill:#4C4A70}
+.key{position:absolute;right:0;bottom:-6px;font-size:12.5px;color:#5B5A7A;display:flex;gap:18px;align-items:center}
+.sw{display:inline-block;width:28px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+</style></head><body><div class="page">
+<div class="title"><div class="logo">₹</div><h1>NoLateFees · today and future scope</h1></div>
+<div class="sub">Today everything runs on the phone. The cloud side is a plan for later: opt-in, and the phone stays the source of truth.</div>
+<div class="canvas" id="c">
+<defs></defs>
+<div class="zone today" style="left:0;top:0;width:444px;height:880px">
+ <div class="zt">Built today · on the phone</div><div class="zs">Flutter app, works fully offline, no network permission</div>
+</div>
+<div class="phone"><div class="screen">
+ <div class="hd">NoLateFees (Android · iOS-ready)</div>
+ <div class="layer hi"><b>Flutter UI · Material 3</b>Dashboard, Calendar, All Items, Settings, renew sheet. Riverpod for state.</div>
+ <div class="layer" id="engine"><b>Reminder engine (pure Dart)</b>30 / 14 / 7 / 3 / 1 / 0 / −1 day offsets, recurrence, month-end and leap-year rules, snooze.</div>
+ <div class="layer" id="drift"><b>Drift · SQLite</b>The only store. Items, renewals, family, attachments. Soft deletes and timestamps ready for sync.</div>
+ <div class="layer"><b>reconcile()</b>Diffs what should be booked against what is booked. Runs after every save, on resume and daily via WorkManager.</div>
+ <div class="layer" id="notif"><b>Local notifications</b>Renewed / Snooze buttons, survive reboot, optional exact alarms.</div>
+ <div class="layer" id="backup"><b>Export &amp; import</b>CSV for spreadsheets, JSON backup to move phones.</div>
+ <div class="layer f" id="sync"><b>Sync client <span class="tag v2">future</span></b>Push dirty rows, pull rows with rev &gt; last seen. Local edits win until pushed.</div>
+ <div class="layer f" id="ocr"><b>ML Kit OCR <span class="tag v3">future</span></b>Scan a policy or PUC slip, read the expiry date on device.</div>
+</div></div>
+
+<div class="zone future" style="left:500px;top:0;width:988px;height:880px">
+ <div class="zt">Future scope · optional cloud</div><div class="zs">Opt-in backup, multi-device sync and family sharing. Suggested stack: Supabase (Postgres) + Firebase Cloud Messaging.</div>
+</div>
+
+<div class="n f" id="auth" style="left:530px;top:96px;width:290px"><span class="ico" style="background:#6366F1">A</span><b>Auth</b>Google, Apple and phone OTP sign-in. Short-lived JWTs; the app keeps working signed out.<br><span class="tag v2">v2</span></div>
+<div class="n f" id="api" style="left:530px;top:250px;width:290px"><span class="ico" style="background:#8B5CF6">⇅</span><b>Sync API</b>PostgREST over Postgres. Upsert batches, pull by rev cursor. Row-level security: users only see their rows.<br><span class="tag v2">v2</span></div>
+<div class="n f" id="store" style="left:530px;top:424px;width:290px"><span class="ico" style="background:#EC4899">⬆</span><b>File storage</b>Private bucket for attachment copies, path {user}/{item}/{file}, 10 MB limit, signed URLs.<br><span class="tag v2">v2</span></div>
+<div class="n f" id="pg" style="left:860px;top:250px;width:290px"><span class="ico" style="background:#3B82F6">DB</span><b>Postgres</b>Same tables as the phone plus user_id and a server rev sequence. Trigger: deletes win over stale edits. Daily backups.<br><span class="tag v2">v2</span></div>
+<div class="n f" id="share" style="left:860px;top:96px;width:290px"><span class="ico" style="background:#14B8A6">👪</span><b>Family sharing</b>Households table and membership, so Dad's insurance reminds two people.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="cron" style="left:860px;top:452px;width:290px"><span class="ico" style="background:#F97316">⏱</span><b>Scheduler · pg_cron</b>Hourly: find reminders due in each user's local time that no phone has delivered yet.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="fn" style="left:1210px;top:452px;width:254px"><span class="ico" style="background:#F59E0B">ƒ</span><b>Edge function "due-push"</b>Same engine logic in TypeScript, writes a delivery log so nothing fires twice.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="fcm" style="left:1210px;top:640px;width:254px"><span class="ico" style="background:#EF4444">🔔</span><b>Push · FCM / APNs</b>Backup channel for a new phone or a shared item.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="mail" style="left:860px;top:640px;width:290px"><span class="ico" style="background:#64748B">✉</span><b>Email / WhatsApp digest</b>Weekly "renew these this week", opt-in.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="web" style="left:1210px;top:96px;width:254px"><span class="ico" style="background:#1E1B4B">⌘</span><b>Web dashboard</b>Flutter web on the same Sync API and Auth, for bulk edits on a laptop.<br><span class="tag v3">v3</span></div>
+<div class="n f" id="widget" style="left:1210px;top:250px;width:254px"><span class="ico" style="background:#0EA5E9">▣</span><b>Home-screen widget</b>Next three due items, read from the local DB.<br><span class="tag v3">v3</span></div>
+
+<div class="n" style="left:530px;top:640px;width:290px;border-color:#C7D2FE"><span class="ico" style="background:#22C55E">✓</span><b>CI · GitHub Actions</b>analyze + 159 tests on every PR, signed APK published to Releases.<br><span class="tag built">built</span> <span class="tag v2">later: Fastlane to Play / App Store</span></div>
+<div class="n f" style="left:530px;top:800px;width:934px"><b style="display:inline;margin-right:8px">Ops when the cloud exists</b>Crashlytics or Sentry for crashes · uptime and budget alerts · App Check against abuse · privacy policy and in-app account deletion · RevenueCat if a premium tier ever ships.</div>
+
+<svg id="s"><defs>
+ <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7C7AA6"/></marker>
+</defs></svg>
+<div class="key"><span><span class="sw" style="border:2px solid #6366F1;background:#fff"></span>built and running</span><span><span class="sw" style="border:2px dashed #A5A3C9;background:#FDFCFF"></span>future, not built</span><span class="tag v2" style="font-size:11px;border-radius:5px;padding:1px 6px">v2</span>sync &amp; backup<span class="tag v3" style="font-size:11px;border-radius:5px;padding:1px 6px">v3</span>sharing, push, more clients</div>
+</div></div>
+<script>
+const c=document.getElementById('c').getBoundingClientRect(), s=document.getElementById('s');
+const R=id=>{const r=document.getElementById(id).getBoundingClientRect();return{l:r.left-c.left,r:r.right-c.left,t:r.top-c.top,b:r.bottom-c.top,cx:r.left-c.left+r.width/2,cy:r.top-c.top+r.height/2}};
+function arrow(pts,label,lx,ly,both,dash){
+ const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+ let d=`M${pts[0][0]},${pts[0][1]}`; if(pts.length===2){const[a,b]=pts;const mx=(a[0]+b[0])/2;d+=` C${mx},${a[1]} ${mx},${b[1]} ${b[0]},${b[1]}`}else{for(const q of pts.slice(1))d+=` L${q[0]},${q[1]}`}
+ p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke','#7C7AA6');p.setAttribute('stroke-width','2');
+ p.setAttribute('stroke-dasharray',dash||'7 5');p.setAttribute('marker-end','url(#ah)');if(both)p.setAttribute('marker-start','url(#ah)');s.appendChild(p);
+ if(label){const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',lx);t.setAttribute('y',ly);t.setAttribute('class','lbl');t.setAttribute('text-anchor','middle');
+ t.setAttribute('paint-order','stroke');t.setAttribute('stroke','#F8F7FF');t.setAttribute('stroke-width','5');t.textContent=label;s.appendChild(t)}
+}
+const sy=R('sync'),au=R('auth'),api=R('api'),st=R('store'),pg=R('pg'),cr=R('cron'),fn=R('fn'),fcm=R('fcm'),ml=R('mail'),web=R('web'),sh=R('share'),no=R('notif');
+arrow([[sy.r+18,sy.cy-12],[au.l,au.cy]],'',0,0,false);
+arrow([[sy.r+18,sy.cy],[api.l,api.cy]],'',0,0,true);
+arrow([[sy.r+18,sy.cy+12],[st.l,st.cy]],'',0,0,false);
+const tag=(n,txt,x,y)=>{const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',x);t.setAttribute('y',y);t.setAttribute('class','lbl');t.textContent=n+' · '+txt;s.appendChild(t)};
+tag('1','sign in, get a JWT',au.l+4,au.t-9);
+tag('2','push dirty rows, pull rows with rev > n',api.l+4,api.t-9);
+tag('3','upload attachment copies',st.l+4,st.t-9);
+arrow([[api.r,api.cy],[pg.l,pg.cy]],'',0,0,true);
+arrow([[sh.cx,sh.b],[pg.cx,pg.t]],'',0,0,false);
+arrow([[pg.cx,pg.b],[cr.cx,cr.t]],'',0,0,false);
+arrow([[cr.r,cr.cy],[fn.l,fn.cy]],'4',(cr.r+fn.l)/2,cr.cy-8,false);
+arrow([[fn.cx,fn.b],[fcm.cx,fcm.t]],'',0,0,false);
+arrow([[fn.l+30,fn.b],[ml.r,ml.cy]],'',0,0,false);
+arrow([[fcm.cx,fcm.b],[fcm.cx,fcm.b+34],[no.r+18,fcm.b+34],[no.r+18,no.cy]],'5 · push only if no phone already showed it',(fcm.cx+no.r)/2+60,fcm.b+28,false);
+</script></body></html>

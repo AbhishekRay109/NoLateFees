@@ -47,7 +47,6 @@ void main() {
     expect(item.dueDate, DateTime.utc(2028, 3, 1));
     expect(item.reminderOffsets, [30, 1]);
     expect(item.familyMemberId, dad);
-    expect(item.dirty, isTrue); // will upload if the user signs in
     expect((await otherRepo.watchRenewals(id).first).single.amountMinor, 2000000);
   });
 
